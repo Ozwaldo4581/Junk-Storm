@@ -145,6 +145,7 @@ namespace JunkStorm
         public int ExpeditionWorkers;
         public bool StormShield;
         public bool BiodomeShield;
+        public bool Eliminated;
         public List<string> Deck = new();
         public List<string> Hand = new();
         public List<string> Discard = new();
@@ -250,6 +251,47 @@ namespace JunkStorm
             return true;
         }
 
+        public bool SkipExpedition()
+        {
+            if (CurrentPhase != Phase.Expedition)
+            {
+                return false;
+            }
+
+            var player = ActivePlayer;
+            player.ExpeditionOutpost = -1;
+            player.ExpeditionWorkers = 0;
+            AddLog($"{player.Name} skipped their expedition and sent 0 worker tokens.");
+            AdvanceTurnOrPhase();
+            return true;
+        }
+
+        public bool SpendCloutForWorkerToken()
+        {
+            if (CurrentPhase != Phase.Action || ActivePlayer.Clout <= 0)
+            {
+                return false;
+            }
+
+            ActivePlayer.Clout--;
+            ActivePlayer.Workers++;
+            AddLog($"{ActivePlayer.Name} spent 1 Clout to gain 1 worker token.");
+            return true;
+        }
+
+        public bool SpendCloutForWorkerCard()
+        {
+            if (CurrentPhase != Phase.Action || ActivePlayer.Clout <= 0)
+            {
+                return false;
+            }
+
+            ActivePlayer.Clout--;
+            ActivePlayer.Discard.Add("Worker");
+            AddLog($"{ActivePlayer.Name} spent 1 Clout to add 1 Worker card to their Recycle Pile.");
+            return true;
+        }
+
         public bool PlayCard(int handIndex, bool destroy)
         {
             if (CurrentPhase != Phase.Action || handIndex < 0 || handIndex >= ActivePlayer.Hand.Count)
@@ -272,7 +314,7 @@ namespace JunkStorm
                 player.Discard.Add(cardName);
             }
 
-            AddLog($"{player.Name} {(destroy ? "destroyed" : "recycled")} {cardName}.");
+            AddLog($"{player.Name} {(destroy ? "discarded" : "recycled")} {cardName}.");
             return true;
         }
 
@@ -376,10 +418,10 @@ namespace JunkStorm
                     var destroyedLocationCard = DrawOutpostCard(outpostIndex);
                     if (destroyedLocationCard != null)
                     {
-                        AddLog($"Junk Storm destroyed the top card of the {Outposts[outpostIndex].Name} Location deck.");
+                        AddLog($"Junk Storm discarded the top card of the {Outposts[outpostIndex].Name} Location deck.");
                     }
 
-                    foreach (var player in Players.Where(candidate => candidate.ExpeditionOutpost == outpostIndex))
+                    foreach (var player in Players.Where(candidate => !candidate.Eliminated && candidate.ExpeditionOutpost == outpostIndex))
                     {
                         HitByStorm(player);
                     }
@@ -387,13 +429,17 @@ namespace JunkStorm
             }
             else
             {
-                foreach (var player in Players.Where(candidate => candidate.ExpeditionOutpost == BiodomerOutpost))
+                foreach (var player in Players.Where(candidate => !candidate.Eliminated && candidate.ExpeditionOutpost == BiodomerOutpost))
                 {
                     HitByBiodomers(player);
                 }
             }
 
-            CurrentPhase = Phase.Reset;
+            if (CurrentPhase != Phase.GameOver)
+            {
+                CurrentPhase = Phase.Reset;
+            }
+
             return roll;
         }
 
@@ -404,7 +450,7 @@ namespace JunkStorm
                 return;
             }
 
-            var winner = Players.FirstOrDefault(player => player.Clout >= 10 && player.Buildings.Any(name => buildings.First(candidate => candidate.Name == name).Tier == 3));
+            var winner = Players.FirstOrDefault(player => !player.Eliminated && player.Clout >= 10 && player.Buildings.Any(name => buildings.First(candidate => candidate.Name == name).Tier == 3));
             if (winner != null)
             {
                 Winner = winner.Name;
@@ -413,7 +459,7 @@ namespace JunkStorm
                 return;
             }
 
-            foreach (var player in Players)
+            foreach (var player in Players.Where(player => !player.Eliminated))
             {
                 player.Discard.AddRange(player.Hand);
                 player.Hand.Clear();
@@ -426,7 +472,7 @@ namespace JunkStorm
             }
 
             Generation++;
-            FirstPlayerIndex = (FirstPlayerIndex + 1) % Players.Count;
+            FirstPlayerIndex = GetNextActivePlayerIndex((FirstPlayerIndex + 1) % Players.Count);
             ActivePlayerIndex = FirstPlayerIndex;
             CurrentPhase = Phase.Expedition;
             AddLog($"First Player token passes to {Players[FirstPlayerIndex].Name}.");
@@ -447,13 +493,13 @@ namespace JunkStorm
             player.BiodomeShield |= effect.BiodomeShield;
             Draw(player, effect.Draw);
 
-            var opponent = Players.FirstOrDefault(candidate => candidate != player);
+            var opponent = Players.FirstOrDefault(candidate => candidate != player && !candidate.Eliminated);
             if (opponent == null)
             {
                 return;
             }
 
-            opponent.Clout = Math.Max(1, opponent.Clout - effect.TargetCloutLoss);
+            LoseCloutForced(opponent, effect.TargetCloutLoss, $"{opponent.Name} lost {effect.TargetCloutLoss} Clout to {player.Name}'s card effect.");
             opponent.Workers = Math.Max(0, opponent.Workers - effect.TargetWorkerLoss);
         }
 
@@ -468,14 +514,13 @@ namespace JunkStorm
             var destroyedCard = DrawPlayerCardToDestroyed(player);
             if (destroyedCard != null)
             {
-                AddLog($"Junk Storm destroyed the top card of {player.Name}'s deck.");
+                AddLog($"Junk Storm discarded the top card of {player.Name}'s Draw Pile.");
             }
 
             var lost = player.ExpeditionWorkers;
             player.Workers = Math.Max(0, player.Workers - lost);
-            player.Clout = Math.Max(1, player.Clout - lost);
             AddLog($"{player.Name} lost {lost} workers to the Junk Storm.");
-            AddLog($"{player.Name} lost {lost} Clout.");
+            LoseCloutForced(player, lost, $"{player.Name} lost {lost} Clout to the Junk Storm.");
         }
 
         private void HitByBiodomers(PlayerState player)
@@ -488,9 +533,35 @@ namespace JunkStorm
 
             var lost = Math.Min(2, Math.Min(player.Workers, player.ExpeditionWorkers));
             player.Workers -= lost;
-            player.Clout = Math.Max(1, player.Clout - lost);
             AddLog($"{player.Name} lost {lost} workers to the Biodomers.");
-            AddLog($"{player.Name} lost {lost} Clout.");
+            LoseCloutForced(player, lost, $"{player.Name} lost {lost} Clout to the Biodomers.");
+        }
+
+        private void LoseCloutForced(PlayerState player, int amount, string lossMessage)
+        {
+            if (amount <= 0 || player.Eliminated)
+            {
+                return;
+            }
+
+            player.Clout = Math.Max(0, player.Clout - amount);
+            AddLog(lossMessage);
+            if (player.Clout == 0)
+            {
+                player.Eliminated = true;
+                player.ExpeditionOutpost = -1;
+                player.ExpeditionWorkers = 0;
+                AddLog($"{player.Name}'s Clout was reduced to 0 by a forced effect.");
+                AddLog($"{player.Name} has been eliminated.");
+
+                var survivors = Players.Where(candidate => !candidate.Eliminated).ToList();
+                if (survivors.Count == 1)
+                {
+                    Winner = survivors[0].Name;
+                    CurrentPhase = Phase.GameOver;
+                    AddLog($"{Winner} is the last player standing and wins!");
+                }
+            }
         }
 
         private PlayerState CreatePlayer(int index)
@@ -591,7 +662,7 @@ namespace JunkStorm
 
             return Players
                 .Select((player, index) => new { player, index })
-                .Where(candidate => candidate.index != attackerIndex && candidate.player.ExpeditionOutpost == attacker.ExpeditionOutpost)
+                .Where(candidate => candidate.index != attackerIndex && !candidate.player.Eliminated && candidate.player.ExpeditionOutpost == attacker.ExpeditionOutpost)
                 .Select(candidate => candidate.index)
                 .ToList();
         }
@@ -605,6 +676,10 @@ namespace JunkStorm
 
             var attacker = Players[attackerIndex];
             var target = Players[targetIndex];
+            if (attacker.Eliminated || target.Eliminated)
+            {
+                return false;
+            }
             if (attacker.ExpeditionOutpost < 0 || attacker.ExpeditionOutpost != target.ExpeditionOutpost)
             {
                 AddLog($"{attacker.Name} cannot attack {target.Name}; they are not at the same Location.");
@@ -622,7 +697,7 @@ namespace JunkStorm
 
             if (RemoveCardFromHand(target, "Soldier", true))
             {
-                AddLog($"{target.Name} destroyed Soldier to defend the attack.");
+                AddLog($"{target.Name} discarded Soldier to defend the attack.");
                 AddLog($"{attacker.Name}'s attack was canceled.");
                 return true;
             }
@@ -631,24 +706,28 @@ namespace JunkStorm
             {
                 if (RemoveCardFromHand(defender, "Soldier", true))
                 {
-                    AddLog($"{defender.Name} destroyed Soldier to defend {target.Name} from {attacker.Name}'s attack.");
+                    AddLog($"{defender.Name} discarded Soldier to defend {target.Name} from {attacker.Name}'s attack.");
                     AddLog($"{attacker.Name}'s attack was canceled.");
                     return true;
                 }
             }
 
             AddLog($"{target.Name} could not defend.");
+            AddLog($"{attacker.Name}'s Soldier attack against {target.Name} succeeded.");
             if (target.Hand.Count == 0)
             {
-                AddLog($"{attacker.Name} attacked {target.Name}, but {target.Name} had no cards in hand.");
-                return true;
+                AddLog($"{attacker.Name} attacked {target.Name}, but {target.Name} had no cards in hand to steal.");
+            }
+            else
+            {
+                var stolenIndex = random.Next(target.Hand.Count);
+                var stolenCard = target.Hand[stolenIndex];
+                target.Hand.RemoveAt(stolenIndex);
+                attacker.Discard.Add(stolenCard);
+                AddLog($"{attacker.Name} stole 1 random card from {target.Name}: {stolenCard}.");
             }
 
-            var stolenIndex = random.Next(target.Hand.Count);
-            var stolenCard = target.Hand[stolenIndex];
-            target.Hand.RemoveAt(stolenIndex);
-            attacker.Discard.Add(stolenCard);
-            AddLog($"{attacker.Name} stole 1 random card from {target.Name}'s hand: {stolenCard}.");
+            LoseCloutForced(target, 1, $"{target.Name} lost 1 Clout to {attacker.Name}'s Soldier attack.");
             return true;
         }
 
@@ -675,12 +754,19 @@ namespace JunkStorm
 
         private List<int> GetTurnOrder()
         {
-            return Enumerable.Range(0, Players.Count).Select(offset => (FirstPlayerIndex + offset) % Players.Count).ToList();
+            return Enumerable.Range(0, Players.Count).Select(offset => (FirstPlayerIndex + offset) % Players.Count).Where(index => !Players[index].Eliminated).ToList();
         }
 
         private void AdvanceTurnOrPhase()
         {
             var order = GetTurnOrder();
+            if (order.Count <= 0)
+            {
+                CurrentPhase = Phase.GameOver;
+                Winner = "No one";
+                return;
+            }
+
             var currentOrderPosition = order.IndexOf(ActivePlayerIndex);
             if (currentOrderPosition >= 0 && currentOrderPosition < order.Count - 1)
             {
@@ -688,13 +774,27 @@ namespace JunkStorm
                 return;
             }
 
-            ActivePlayerIndex = FirstPlayerIndex;
+            ActivePlayerIndex = order.Count > 0 ? order[0] : FirstPlayerIndex;
             CurrentPhase = CurrentPhase switch
             {
                 Phase.Expedition => Phase.Action,
                 Phase.Action => Phase.Storm,
                 _ => CurrentPhase
             };
+        }
+
+        private int GetNextActivePlayerIndex(int startIndex)
+        {
+            for (var offset = 0; offset < Players.Count; offset++)
+            {
+                var candidate = (startIndex + offset) % Players.Count;
+                if (!Players[candidate].Eliminated)
+                {
+                    return candidate;
+                }
+            }
+
+            return startIndex;
         }
 
         private string GetUnsafeLocationReason(int outpostIndex)
