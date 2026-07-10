@@ -5,7 +5,7 @@
 
 A lightweight two-player Unity prototype is included for early loop testing. It supports the first pass of the core flow: choosing locations, scavenging cards, recycling or destroying hand cards for resources, building early infrastructure, resolving the Junk Storm/Biodomers die, and resetting into the next generation.
 
-The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase. The New Game button now lives in a top-right utility area next to an indexed in-game Rulebook button for reviewing rules during play. Threat indicators now appear directly on Location buttons, threat movement is shown step-by-step with direction arrows, and the event log reports specific movement, worker loss, Clout loss, defense use, and Location deck damage.
+The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase. The New Game button now lives in a top-right utility area next to an indexed in-game Rulebook button for reviewing rules during play. Threat indicators now appear directly on Location buttons, threat movement is shown step-by-step with direction arrows, and the event log reports specific movement, worker loss, Clout loss, defense use, and Location deck damage. During Expedition, click a Location button once per worker you want to assign, then Confirm Expedition; use Clear Expedition Selection or Remove 1 Worker to adjust before confirming. The prototype also shows the rotating First Player and turn order, and players sharing a Location can use Soldier cards for attacks and defense.
 
 To run it locally, open this repository as a Unity project and load `Assets/Scenes/JunkStormPrototype.unity`. The scene contains a `JunkStormUnityController` entry point that builds the prototype UI at runtime.
 
@@ -120,7 +120,7 @@ Labor is a temporary generation resource used to build buildings. The Worker car
 ### Soldier
 
 Recycle: Gain 1 Defense Strength this generation.
-Destroy: Cancel one Biodomer attack against you.
+Destroy: Choose one: cancel one Biodomer attack against you, attack another player at your Location, or defend yourself or another player at your Location from a Soldier attack.
 
 ### Storm Shield
 
@@ -198,11 +198,13 @@ A player may choose only one Expedition Bonus per generation.
 
 ## Step 2: Declare Expedition
 
-In turn order, each player may send workers to one Location, the Biodome, or the Wilderness.
+In turn order, starting with the current First Player, each player may send workers to one Location, the Biodome, or the Wilderness.
 
 A player may bring workers up to their current Clout.
 
 Example: A player with 4 Clout may bring up to 4 workers.
+
+In the Unity prototype, click a valid Location once to assign 1 worker, click the same Location again to assign another worker, or click a different valid Location to switch destinations and reset the assignment to 1 worker. Click **Confirm Expedition** to send the assigned workers. Click **Clear Expedition Selection** to start over, or **Remove 1 Worker** to reduce the assignment.
 
 A player cannot go to a Location with the Junk Storm or Biodomers; that Location is unsafe.
 
@@ -257,6 +259,10 @@ In turn order, each player may do the following:
 5. Use Attack, Defense, or Passive cards when appropriate.
 
 Players may play as many cards as they want, but each card must be either recycled or destroyed when played.
+
+## Soldier Conflict
+
+During the Action Phase, a player at a non-Colony Location may destroy a Soldier card to attack another player at the same Location. If the attack is undefended, the attacker steals 1 random card from the target player's hand and places it in their discard pile. The target may destroy a Soldier from hand to cancel the attack; if the target cannot defend, another player at that same Location may destroy Soldier to defend the target. Soldier attacks are not allowed at the Colony.
 
 ## Building Limit
 

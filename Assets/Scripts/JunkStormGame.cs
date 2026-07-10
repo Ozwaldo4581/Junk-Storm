@@ -162,6 +162,7 @@ namespace JunkStorm
         public int Generation { get; private set; } = 1;
         public Phase CurrentPhase { get; private set; } = Phase.Expedition;
         public int ActivePlayerIndex { get; private set; }
+        public int FirstPlayerIndex { get; private set; }
         public int JunkStormOutpost { get; private set; }
         public int BiodomerOutpost { get; private set; } = 3;
         public string Winner { get; private set; }
@@ -188,6 +189,7 @@ namespace JunkStorm
             Generation = 1;
             CurrentPhase = Phase.Expedition;
             ActivePlayerIndex = 0;
+            FirstPlayerIndex = 0;
             JunkStormOutpost = 0;
             BiodomerOutpost = 3;
             Winner = null;
@@ -203,10 +205,10 @@ namespace JunkStorm
                 Players.Add(player);
             }
 
-            AddLog("Generation 1 begins. Send each player to an outpost.");
+            AddLog($"Generation 1 begins. First Player: {Players[FirstPlayerIndex].Name}. Turn order: {GetTurnOrderText()}.");
         }
 
-        public bool Scavenge(int outpostIndex)
+        public bool Scavenge(int outpostIndex, int assignedWorkers = -1)
         {
             if (CurrentPhase != Phase.Expedition || outpostIndex < 0 || outpostIndex >= Outposts.Count)
             {
@@ -220,7 +222,13 @@ namespace JunkStorm
             }
 
             var player = ActivePlayer;
-            var workers = Math.Min(player.Workers, player.Clout);
+            var workerLimit = Math.Min(player.Workers, player.Clout);
+            var workers = assignedWorkers > 0 ? Math.Min(assignedWorkers, workerLimit) : workerLimit;
+            if (workers <= 0)
+            {
+                AddLog($"{player.Name} has no available workers to send.");
+                return false;
+            }
             var gained = new List<string>();
             player.ExpeditionOutpost = outpostIndex;
             player.ExpeditionWorkers = workers;
@@ -418,8 +426,11 @@ namespace JunkStorm
             }
 
             Generation++;
-            ActivePlayerIndex = 0;
+            FirstPlayerIndex = (FirstPlayerIndex + 1) % Players.Count;
+            ActivePlayerIndex = FirstPlayerIndex;
             CurrentPhase = Phase.Expedition;
+            AddLog($"First Player token passes to {Players[FirstPlayerIndex].Name}.");
+            AddLog($"Generation {Generation} turn order: {GetTurnOrderText()}.");
             AddLog($"Generation {Generation} begins.");
         }
 
@@ -565,15 +576,119 @@ namespace JunkStorm
             return card;
         }
 
+        public string GetTurnOrderText()
+        {
+            return string.Join(" → ", GetTurnOrder().Select(index => Players[index].Name));
+        }
+
+        public List<int> GetSoldierAttackTargets(int attackerIndex)
+        {
+            var attacker = Players[attackerIndex];
+            if (attacker.ExpeditionOutpost < 0)
+            {
+                return new List<int>();
+            }
+
+            return Players
+                .Select((player, index) => new { player, index })
+                .Where(candidate => candidate.index != attackerIndex && candidate.player.ExpeditionOutpost == attacker.ExpeditionOutpost)
+                .Select(candidate => candidate.index)
+                .ToList();
+        }
+
+        public bool SoldierAttack(int attackerIndex, int targetIndex)
+        {
+            if (CurrentPhase != Phase.Action || attackerIndex < 0 || attackerIndex >= Players.Count || targetIndex < 0 || targetIndex >= Players.Count)
+            {
+                return false;
+            }
+
+            var attacker = Players[attackerIndex];
+            var target = Players[targetIndex];
+            if (attacker.ExpeditionOutpost < 0 || attacker.ExpeditionOutpost != target.ExpeditionOutpost)
+            {
+                AddLog($"{attacker.Name} cannot attack {target.Name}; they are not at the same Location.");
+                return false;
+            }
+
+            if (!RemoveCardFromHand(attacker, "Soldier", true))
+            {
+                AddLog($"{attacker.Name} cannot attack; no Soldier in hand.");
+                return false;
+            }
+
+            var locationName = Outposts[attacker.ExpeditionOutpost].Name;
+            AddLog($"{attacker.Name} attacked {target.Name} at {locationName} using Soldier.");
+
+            if (RemoveCardFromHand(target, "Soldier", true))
+            {
+                AddLog($"{target.Name} destroyed Soldier to defend the attack.");
+                AddLog($"{attacker.Name}'s attack was canceled.");
+                return true;
+            }
+
+            foreach (var defender in Players.Where(player => player != attacker && player != target && player.ExpeditionOutpost == attacker.ExpeditionOutpost))
+            {
+                if (RemoveCardFromHand(defender, "Soldier", true))
+                {
+                    AddLog($"{defender.Name} destroyed Soldier to defend {target.Name} from {attacker.Name}'s attack.");
+                    AddLog($"{attacker.Name}'s attack was canceled.");
+                    return true;
+                }
+            }
+
+            AddLog($"{target.Name} could not defend.");
+            if (target.Hand.Count == 0)
+            {
+                AddLog($"{attacker.Name} attacked {target.Name}, but {target.Name} had no cards in hand.");
+                return true;
+            }
+
+            var stolenIndex = random.Next(target.Hand.Count);
+            var stolenCard = target.Hand[stolenIndex];
+            target.Hand.RemoveAt(stolenIndex);
+            attacker.Discard.Add(stolenCard);
+            AddLog($"{attacker.Name} stole 1 random card from {target.Name}'s hand: {stolenCard}.");
+            return true;
+        }
+
+        private bool RemoveCardFromHand(PlayerState player, string cardName, bool destroy)
+        {
+            var cardIndex = player.Hand.IndexOf(cardName);
+            if (cardIndex < 0)
+            {
+                return false;
+            }
+
+            player.Hand.RemoveAt(cardIndex);
+            if (destroy)
+            {
+                player.Destroyed.Add(cardName);
+            }
+            else
+            {
+                player.Discard.Add(cardName);
+            }
+
+            return true;
+        }
+
+        private List<int> GetTurnOrder()
+        {
+            return Enumerable.Range(0, Players.Count).Select(offset => (FirstPlayerIndex + offset) % Players.Count).ToList();
+        }
+
         private void AdvanceTurnOrPhase()
         {
-            if (ActivePlayerIndex < Players.Count - 1)
+            var order = GetTurnOrder();
+            var currentOrderPosition = order.IndexOf(ActivePlayerIndex);
+            if (currentOrderPosition >= 0 && currentOrderPosition < order.Count - 1)
             {
-                ActivePlayerIndex++;
+                ActivePlayerIndex = order[currentOrderPosition + 1];
                 return;
             }
 
-            ActivePlayerIndex = 0;
+            ActivePlayerIndex = FirstPlayerIndex;
             CurrentPhase = CurrentPhase switch
             {
                 Phase.Expedition => Phase.Action,
