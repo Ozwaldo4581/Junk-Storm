@@ -1,6 +1,7 @@
 using System.Linq;
 using JunkStorm;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public sealed class JunkStormUnityController : MonoBehaviour
@@ -14,6 +15,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
     private void Awake()
     {
+        EnsureEventSystem();
         game = new JunkStormGame();
         BuildCanvas();
         Render();
@@ -29,20 +31,20 @@ public sealed class JunkStormUnityController : MonoBehaviour
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1600, 900);
 
-        var root = CreatePanel(canvasObject.transform, "Root", new Color(0.08f, 0.06f, 0.05f), TextAnchor.UpperLeft);
+        var root = CreateBackgroundPanel(canvasObject.transform, "Root", new Color(0.08f, 0.06f, 0.05f));
         Stretch(root.GetComponent<RectTransform>());
 
-        var title = CreateText(root.transform, "Title", "Junk Storm", 54, FontStyle.Bold, Color.white);
-        Anchor(title.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(32, -96), new Vector2(-32, -16));
+        var title = CreateText(root.transform, "Title", "Junk Storm", 48, FontStyle.Bold, Color.white);
+        Anchor(title.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(32, -82), new Vector2(-32, -16));
 
-        boardRoot = CreatePanel(root.transform, "Board", new Color(0.14f, 0.10f, 0.08f), TextAnchor.UpperLeft).transform;
-        Anchor((RectTransform)boardRoot, new Vector2(0, 0.25f), new Vector2(0.68f, 0.9f), new Vector2(32, 24), new Vector2(-16, -112));
+        boardRoot = CreateScrollablePanel(root.transform, "Board", new Color(0.14f, 0.10f, 0.08f));
+        Anchor((RectTransform)boardRoot.parent.parent, new Vector2(0, 0.28f), new Vector2(0.66f, 0.9f), new Vector2(32, 18), new Vector2(-14, -96));
 
-        controlRoot = CreatePanel(root.transform, "Controls", new Color(0.12f, 0.09f, 0.08f), TextAnchor.UpperLeft).transform;
-        Anchor((RectTransform)controlRoot, new Vector2(0.68f, 0.25f), new Vector2(1, 0.9f), new Vector2(16, 24), new Vector2(-32, -112));
+        controlRoot = CreateScrollablePanel(root.transform, "Controls", new Color(0.12f, 0.09f, 0.08f));
+        Anchor((RectTransform)controlRoot.parent.parent, new Vector2(0.66f, 0.28f), new Vector2(1, 0.9f), new Vector2(14, 18), new Vector2(-32, -96));
 
-        logRoot = CreatePanel(root.transform, "Log", new Color(0.10f, 0.08f, 0.07f), TextAnchor.UpperLeft).transform;
-        Anchor((RectTransform)logRoot, new Vector2(0, 0), new Vector2(1, 0.25f), new Vector2(32, 24), new Vector2(-32, -16));
+        logRoot = CreateScrollablePanel(root.transform, "Log", new Color(0.10f, 0.08f, 0.07f));
+        Anchor((RectTransform)logRoot.parent.parent, new Vector2(0, 0), new Vector2(1, 0.28f), new Vector2(32, 18), new Vector2(-32, -16));
     }
 
     private void Render()
@@ -170,6 +172,18 @@ public sealed class JunkStormUnityController : MonoBehaviour
         CreateText(logRoot, "LogEntries", string.Join("\n", game.Log), 18, FontStyle.Normal, new Color(0.86f, 0.78f, 0.68f));
     }
 
+
+    private static void EnsureEventSystem()
+    {
+        if (EventSystem.current != null)
+        {
+            return;
+        }
+
+        var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+        DontDestroyOnLoad(eventSystem);
+    }
+
     private Button CreateButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick, bool interactable = true)
     {
         var buttonObject = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
@@ -184,7 +198,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
         layout.minHeight = 46;
 
         var text = CreateText(buttonObject.transform, "Label", label, 17, FontStyle.Bold, new Color(0.12f, 0.08f, 0.06f));
-        Stretch(text.rectTransform, 8, 4, -8, -4);
+        Stretch(text.rectTransform, 8, -4, -8, 4);
         text.alignment = TextAnchor.MiddleCenter;
         return button;
     }
@@ -208,20 +222,52 @@ public sealed class JunkStormUnityController : MonoBehaviour
         return text;
     }
 
-    private GameObject CreatePanel(Transform parent, string name, Color color, TextAnchor childAlignment)
+    private Transform CreateScrollablePanel(Transform parent, string name, Color color)
     {
-        var panel = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
-        panel.transform.SetParent(parent, false);
-        panel.GetComponent<Image>().color = color;
+        var panel = CreateBackgroundPanel(parent, name, color);
+        var scrollRect = panel.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = 28f;
 
-        var layout = panel.GetComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(18, 18, 18, 18);
+        var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+        viewport.transform.SetParent(panel.transform, false);
+        viewport.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.01f);
+        Stretch(viewport.GetComponent<RectTransform>(), 18, -18, -18, 18);
+
+        var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        content.transform.SetParent(viewport.transform, false);
+
+        var contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0, 1);
+        contentRect.anchorMax = new Vector2(1, 1);
+        contentRect.pivot = new Vector2(0.5f, 1);
+        contentRect.offsetMin = Vector2.zero;
+        contentRect.offsetMax = Vector2.zero;
+
+        var layout = content.GetComponent<VerticalLayoutGroup>();
         layout.spacing = 10;
-        layout.childAlignment = childAlignment;
+        layout.childAlignment = TextAnchor.UpperLeft;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
+
+        var fitter = content.GetComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        scrollRect.viewport = viewport.GetComponent<RectTransform>();
+        scrollRect.content = contentRect;
+        return content.transform;
+    }
+
+    private GameObject CreateBackgroundPanel(Transform parent, string name, Color color)
+    {
+        var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(parent, false);
+        panel.GetComponent<Image>().color = color;
         return panel;
     }
 
