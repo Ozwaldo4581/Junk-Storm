@@ -83,27 +83,39 @@ namespace JunkStorm
         public int Alloy;
         public int Organics;
         public int Plastoid;
+        public int FlexibleAlloyPlastoid;
         public int Labor;
         public int Defense;
 
         public bool CanPay(ResourcePool cost)
         {
-            return Alloy >= cost.Alloy && Organics >= cost.Organics && Plastoid >= cost.Plastoid && Labor >= cost.Labor;
+            var remainingAlloy = Alloy - cost.Alloy;
+            var remainingPlastoid = Plastoid - cost.Plastoid;
+            return Organics >= cost.Organics && Labor >= cost.Labor && remainingAlloy >= 0 && remainingPlastoid >= 0 && remainingAlloy + remainingPlastoid >= cost.FlexibleAlloyPlastoid;
         }
 
-        public void Pay(ResourcePool cost)
+        public string Pay(ResourcePool cost)
         {
             Alloy -= cost.Alloy;
             Organics -= cost.Organics;
             Plastoid -= cost.Plastoid;
             Labor -= cost.Labor;
+
+            var flexiblePaidWithAlloy = Math.Min(Alloy, cost.FlexibleAlloyPlastoid);
+            Alloy -= flexiblePaidWithAlloy;
+            var flexiblePaidWithPlastoid = cost.FlexibleAlloyPlastoid - flexiblePaidWithAlloy;
+            Plastoid -= flexiblePaidWithPlastoid;
+
+            if (cost.FlexibleAlloyPlastoid <= 0)
+            {
+                return string.Empty;
+            }
+
+            return $" Paid flexible material cost with {flexiblePaidWithAlloy} Alloy and {flexiblePaidWithPlastoid} Plastoid.";
         }
 
-        public void Clear()
+        public void ClearTemporary()
         {
-            Alloy = 0;
-            Organics = 0;
-            Plastoid = 0;
             Labor = 0;
             Defense = 0;
         }
@@ -295,10 +307,10 @@ namespace JunkStorm
                 return false;
             }
 
-            ActivePlayer.Resources.Pay(building.Cost);
+            var paymentLog = ActivePlayer.Resources.Pay(building.Cost);
             ActivePlayer.Buildings.Add(building.Name);
             ActivePlayer.Clout += building.CloutReward;
-            AddLog($"{ActivePlayer.Name} built {building.Name}.");
+            AddLog($"{ActivePlayer.Name} built {building.Name}.{paymentLog}");
             return true;
         }
 
@@ -384,7 +396,7 @@ namespace JunkStorm
                 player.ExpeditionWorkers = 0;
                 player.StormShield = false;
                 player.BiodomeShield = false;
-                player.Resources.Clear();
+                player.Resources.ClearTemporary();
                 Draw(player, 5);
             }
 
@@ -591,8 +603,16 @@ namespace JunkStorm
                 new("Military Base", 1, new ResourcePool { Alloy = 3, Plastoid = 1, Labor = 1 }, 2),
                 new("Laboratory", 1, new ResourcePool { Alloy = 1, Plastoid = 3, Labor = 1 }, 2),
                 new("Transportation Station", 1, new ResourcePool { Alloy = 2, Plastoid = 2, Labor = 1 }, 2),
+                new("Town Hall", 1, new ResourcePool { Organics = 3, FlexibleAlloyPlastoid = 1, Labor = 1 }, 2),
+                new("Apartment Building", 1, new ResourcePool { Organics = 3, FlexibleAlloyPlastoid = 1, Labor = 1 }, 2),
                 new("Farming Center", 2, new ResourcePool { Organics = 6, Labor = 2 }, 2, "Farm", 6),
-                new("Terraforming Station", 3, new ResourcePool { Organics = 6, Alloy = 2, Plastoid = 2, Labor = 3 }, 0, "Farming Center", 10)
+                new("Weapons Factory", 2, new ResourcePool { Alloy = 4, Plastoid = 3, Labor = 2 }, 2, "Military Base", 6),
+                new("Internet Servers", 2, new ResourcePool { Alloy = 3, Plastoid = 4, Labor = 2 }, 2, "Laboratory", 6),
+                new("Subway Station", 2, new ResourcePool { Organics = 2, FlexibleAlloyPlastoid = 3, Labor = 2 }, 2, "Transportation Station", 6),
+                new("Terraforming Station", 3, new ResourcePool { Organics = 6, Alloy = 2, Plastoid = 2, Labor = 3 }, 0, "Farming Center", 10),
+                new("Rocket Launch Pad", 3, new ResourcePool { Alloy = 6, Plastoid = 4, Labor = 3 }, 0, "Weapons Factory", 10),
+                new("Deep Earth Drill", 3, new ResourcePool { Alloy = 4, Plastoid = 4, Organics = 2, Labor = 3 }, 0, "Subway Station", 10),
+                new("Advanced Communications Array", 3, new ResourcePool { Alloy = 3, Plastoid = 6, Organics = 1, Labor = 3 }, 0, "Internet Servers", 10)
             };
         }
     }

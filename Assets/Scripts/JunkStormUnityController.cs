@@ -93,7 +93,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
             CreateText(
                 boardRoot,
                 player.Name,
-                $"{player.Name} ({player.Character})\nClout {player.Clout} | Workers {player.Workers} | Deck {player.Deck.Count} | Discard {player.Discard.Count}\nResources — Alloy {player.Resources.Alloy}, Organics {player.Resources.Organics}, Plastoid {player.Resources.Plastoid}, Labor {player.Resources.Labor}\nHand: {hand}\nBuildings: {buildings}",
+                $"{player.Name} ({player.Character})\nClout {player.Clout} | Worker Tokens {player.Workers} | Deck {player.Deck.Count} | Discard {player.Discard.Count}\nStored Resources — Alloy {player.Resources.Alloy}, Organics {player.Resources.Organics}, Plastoid {player.Resources.Plastoid}\nTemporary Labor — Labor {player.Resources.Labor}\nHand: {hand}\nBuildings: {buildings}",
                 19,
                 FontStyle.Normal,
                 new Color(0.88f, 0.80f, 0.70f));
@@ -167,7 +167,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
             {
                 game.ResetGeneration();
                 Render();
-            }, true, "Reset Generation — Discard remaining hands, clear temporary resources, draw back up, check victory, and start the next generation.");
+            }, true, "Reset Generation — Discard remaining hands, clear temporary flags, reset temporary Labor, draw back up, check victory, and start the next generation. Stored resources persist. Temporary Labor resets.");
         }
         else
         {
@@ -197,6 +197,11 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
     private string GetCardTooltip(string cardName)
     {
+        if (cardName == "Worker")
+        {
+            return "Worker — Starter. Recycle: Gain 1 temporary Labor this generation. Destroy: Gain 2 temporary Labor this generation. Labor is used to build and resets at the end of the generation.";
+        }
+
         if (!game.Cards.TryGetValue(cardName, out var card))
         {
             return cardName;
@@ -260,7 +265,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
             return "requires two Tier 1 buildings";
         }
 
-        return "cannot afford the resource/Labor cost";
+        return "cannot afford the stored resource or temporary Labor cost";
     }
 
     private static string GetBuildingBonusText(string buildingName)
@@ -272,7 +277,13 @@ public sealed class JunkStormUnityController : MonoBehaviour
             "Laboratory" => "Expedition Bonus: destroy 1 fewer deck card if the Junk Storm affects you and you cannot defend.",
             "Transportation Station" => "Expedition Bonus: scavenged Alloy or Plastoid may go on top of your deck.",
             "Farming Center" => "Colony Bonus: each player gains 1 worker token. Expedition Bonus: scavenge 1 additional card per worker.",
+            "Weapons Factory" => "Colony Bonus: each player adds a Weapon Outfitting card to their discard pile. Expedition Bonus: unaffected by Biodomers this generation.",
+            "Internet Servers" => "Colony Bonus: once per generation, each player may reduce a building cost by 1 Alloy or Plastoid. Expedition Bonus: unaffected by the Junk Storm this generation.",
+            "Subway Station" => "Colony Bonus: each player may bring 1 additional worker token on expeditions. Expedition Bonus: scavenged cards may go on top of your deck.",
             "Terraforming Station" => "Victory Meaning: terraform the planet and make Earth livable again.",
+            "Rocket Launch Pad" => "Victory Meaning: escape Earth and build humanity's future elsewhere.",
+            "Deep Earth Drill" => "Victory Meaning: tunnel beneath the ruined world and create a hidden civilization.",
+            "Advanced Communications Array" => "Victory Meaning: hack the nanosphere and take control of the Junk Storm.",
             _ => string.Empty
         };
     }
@@ -285,7 +296,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
         if (effect.Alloy != 0) parts.Add($"Generate {effect.Alloy} Alloy");
         if (effect.Organics != 0) parts.Add($"Generate {effect.Organics} Organics");
         if (effect.Plastoid != 0) parts.Add($"Generate {effect.Plastoid} Plastoid");
-        if (effect.Labor != 0) parts.Add($"Generate {effect.Labor} Labor this generation");
+        if (effect.Labor != 0) parts.Add($"Gain {effect.Labor} temporary Labor this generation");
         if (effect.Defense != 0) parts.Add($"Gain {effect.Defense} Defense Strength this generation");
         if (effect.Draw != 0) parts.Add($"Draw {effect.Draw} card(s)");
         if (effect.TargetCloutLoss != 0) parts.Add($"Target loses {effect.TargetCloutLoss} Clout");
@@ -301,6 +312,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
         if (cost.Organics > 0) parts.Add($"{cost.Organics} Organics");
         if (cost.Alloy > 0) parts.Add($"{cost.Alloy} Alloy");
         if (cost.Plastoid > 0) parts.Add($"{cost.Plastoid} Plastoid");
+        if (cost.FlexibleAlloyPlastoid > 0) parts.Add($"{cost.FlexibleAlloyPlastoid} Alloy/Plastoid");
         if (cost.Labor > 0) parts.Add($"{cost.Labor} Labor");
         return parts.Count == 0 ? "Free" : string.Join(" + ", parts);
     }
