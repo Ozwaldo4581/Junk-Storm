@@ -268,8 +268,14 @@ namespace JunkStorm
 
         public bool SpendCloutForWorkerToken()
         {
-            if (CurrentPhase != Phase.Action || ActivePlayer.Clout <= 0)
+            if (CurrentPhase != Phase.Action)
             {
+                return false;
+            }
+
+            if (ActivePlayer.Clout <= 1)
+            {
+                AddLog($"{ActivePlayer.Name} cannot spend Clout: You must retain at least 1 Clout.");
                 return false;
             }
 
@@ -281,8 +287,14 @@ namespace JunkStorm
 
         public bool SpendCloutForWorkerCard()
         {
-            if (CurrentPhase != Phase.Action || ActivePlayer.Clout <= 0)
+            if (CurrentPhase != Phase.Action)
             {
+                return false;
+            }
+
+            if (ActivePlayer.Clout <= 1)
+            {
+                AddLog($"{ActivePlayer.Name} cannot spend Clout: You must retain at least 1 Clout.");
                 return false;
             }
 

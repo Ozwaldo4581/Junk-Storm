@@ -33,7 +33,7 @@ If multiple players meet the victory condition in the same generation, the playe
 **Clout**
 Clout represents social influence, morale, leadership, and political power. It determines how many workers a player can bring on expeditions and whether they qualify for advanced buildings.
 
-All players start with **1 Clout**. During the Action Phase, a player may voluntarily spend 1 Clout to gain 1 worker token, or spend 1 Clout to add 1 Worker card to their Recycle Pile. Voluntary spending may reduce a player to 0 Clout without eliminating them. Forced Clout loss from hazards, Biodomers, attacks, or other non-chosen effects can reduce Clout to 0; when it does, that player is immediately eliminated.
+All players start with **1 Clout**. During the Action Phase, a player may voluntarily spend 1 Clout to gain 1 worker token, or spend 1 Clout to add 1 Worker card to their Recycle Pile. A Clout purchase is only available if the player has at least 2 Clout, because voluntary spending must leave the player with at least 1 Clout. Forced Clout loss from hazards, Biodomers, attacks, or other non-chosen effects can reduce Clout to 0; when it does, that player is immediately eliminated.
 
 **Workers**
 Workers are people willing to follow a player into danger. Workers are represented by tokens. Workers are used during expeditions and may die to the Junk Storm, Biodomers, events, or attacks.
@@ -254,7 +254,7 @@ In turn order, each player may do the following:
 
 1. Play any number of cards from hand.
 2. Use Recycle or Discard abilities.
-3. Spend 1 Clout to gain 1 worker token or spend 1 Clout to add 1 Worker card to your Recycle Pile.
+3. If you have at least 2 Clout, spend 1 Clout to gain 1 worker token or spend 1 Clout to add 1 Worker card to your Recycle Pile. You must retain at least 1 Clout.
 4. Build up to one building.
 5. Use one character special action, if available.
 6. Use Attack, Defense, or Passive cards when appropriate.
