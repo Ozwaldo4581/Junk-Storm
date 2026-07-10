@@ -215,7 +215,7 @@ namespace JunkStorm
 
             if (outpostIndex == JunkStormOutpost || outpostIndex == BiodomerOutpost)
             {
-                AddLog($"{ActivePlayer.Name} cannot visit {Outposts[outpostIndex].Name}; it is occupied.");
+                AddLog($"{ActivePlayer.Name} cannot visit {Outposts[outpostIndex].Name}; {GetUnsafeLocationReason(outpostIndex)}");
                 return false;
             }
 
@@ -332,8 +332,11 @@ namespace JunkStorm
             var roll = forcedRoll is >= 1 and <= 10 ? forcedRoll : random.Next(1, 11);
             var movingStorm = roll <= 5;
             var direction = roll % 2 == 0 ? 1 : -1;
+            var directionName = direction > 0 ? "clockwise" : "counterclockwise";
             var distance = movingStorm ? roll : roll - 5;
             var affected = new List<int>();
+            var startIndex = movingStorm ? JunkStormOutpost : BiodomerOutpost;
+            var startName = Outposts[startIndex].Name;
 
             for (var step = 0; step < distance; step++)
             {
@@ -345,14 +348,29 @@ namespace JunkStorm
                 else
                 {
                     BiodomerOutpost = WrapOutpost(BiodomerOutpost + direction);
+                    affected.Add(BiodomerOutpost);
                 }
+            }
+
+            var threatName = movingStorm ? "Junk Storm" : "Biodomers";
+            var endIndex = movingStorm ? JunkStormOutpost : BiodomerOutpost;
+            AddLog($"{threatName} rolled {roll}.");
+            AddLog($"{threatName} moves {directionName} from {startName} to {Outposts[endIndex].Name}.");
+            if (affected.Count > 0)
+            {
+                AddLog($"{threatName} passed through: {string.Join(", ", affected.Select(index => Outposts[index].Name))}.");
             }
 
             if (movingStorm)
             {
                 foreach (var outpostIndex in affected)
                 {
-                    DrawOutpostCard(outpostIndex);
+                    var destroyedLocationCard = DrawOutpostCard(outpostIndex);
+                    if (destroyedLocationCard != null)
+                    {
+                        AddLog($"Junk Storm destroyed the top card of the {Outposts[outpostIndex].Name} Location deck.");
+                    }
+
                     foreach (var player in Players.Where(candidate => candidate.ExpeditionOutpost == outpostIndex))
                     {
                         HitByStorm(player);
@@ -367,7 +385,6 @@ namespace JunkStorm
                 }
             }
 
-            AddLog($"Rolled {roll}: {(movingStorm ? "Junk Storm" : "Biodomers")} moved.");
             CurrentPhase = Phase.Reset;
             return roll;
         }
@@ -433,29 +450,36 @@ namespace JunkStorm
         {
             if (player.StormShield)
             {
-                AddLog($"{player.Name}'s Storm Shield cancelled the Junk Storm.");
+                AddLog($"{player.Name} used Storm Shield to cancel Junk Storm effects.");
                 return;
             }
 
-            DrawPlayerCardToDestroyed(player);
+            var destroyedCard = DrawPlayerCardToDestroyed(player);
+            if (destroyedCard != null)
+            {
+                AddLog($"Junk Storm destroyed the top card of {player.Name}'s deck.");
+            }
+
             var lost = player.ExpeditionWorkers;
             player.Workers = Math.Max(0, player.Workers - lost);
             player.Clout = Math.Max(1, player.Clout - lost);
-            AddLog($"{player.Name} lost {lost} worker(s) to the Junk Storm.");
+            AddLog($"{player.Name} lost {lost} workers to the Junk Storm.");
+            AddLog($"{player.Name} lost {lost} Clout.");
         }
 
         private void HitByBiodomers(PlayerState player)
         {
             if (player.BiodomeShield)
             {
-                AddLog($"{player.Name}'s defense cancelled the Biodomer attack.");
+                AddLog($"{player.Name} used Soldier or Weapon Outfitting to cancel the Biodomer attack.");
                 return;
             }
 
             var lost = Math.Min(2, Math.Min(player.Workers, player.ExpeditionWorkers));
             player.Workers -= lost;
             player.Clout = Math.Max(1, player.Clout - lost);
-            AddLog($"{player.Name} lost {lost} worker(s) to Biodomers.");
+            AddLog($"{player.Name} lost {lost} workers to the Biodomers.");
+            AddLog($"{player.Name} lost {lost} Clout.");
         }
 
         private PlayerState CreatePlayer(int index)
@@ -509,7 +533,7 @@ namespace JunkStorm
             }
         }
 
-        private void DrawPlayerCardToDestroyed(PlayerState player)
+        private string DrawPlayerCardToDestroyed(PlayerState player)
         {
             if (player.Deck.Count == 0 && player.Discard.Count > 0)
             {
@@ -519,11 +543,13 @@ namespace JunkStorm
 
             if (player.Deck.Count == 0)
             {
-                return;
+                return null;
             }
 
-            player.Destroyed.Add(player.Deck[0]);
+            var card = player.Deck[0];
+            player.Destroyed.Add(card);
             player.Deck.RemoveAt(0);
+            return card;
         }
 
         private string DrawOutpostCard(int outpostIndex)
@@ -554,6 +580,28 @@ namespace JunkStorm
                 Phase.Action => Phase.Storm,
                 _ => CurrentPhase
             };
+        }
+
+        private string GetUnsafeLocationReason(int outpostIndex)
+        {
+            var junkStormHere = outpostIndex == JunkStormOutpost;
+            var biodomersHere = outpostIndex == BiodomerOutpost;
+            if (junkStormHere && biodomersHere)
+            {
+                return "the Junk Storm and Biodomers are there.";
+            }
+
+            if (junkStormHere)
+            {
+                return "the Junk Storm is there.";
+            }
+
+            if (biodomersHere)
+            {
+                return "the Biodomers are there.";
+            }
+
+            return "the Location is safe.";
         }
 
         private int WrapOutpost(int index)

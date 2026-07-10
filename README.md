@@ -3,9 +3,9 @@
 
 ## Unity Prototype
 
-A lightweight two-player Unity prototype is included for early loop testing. It supports the first pass of the core flow: choosing outposts, scavenging cards, recycling or destroying hand cards for resources, building early infrastructure, resolving the Junk Storm/Biodomers die, and resetting into the next generation.
+A lightweight two-player Unity prototype is included for early loop testing. It supports the first pass of the core flow: choosing locations, scavenging cards, recycling or destroying hand cards for resources, building early infrastructure, resolving the Junk Storm/Biodomers die, and resetting into the next generation.
 
-The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase. The New Game button now lives in a top-right utility area next to an indexed in-game Rulebook button for reviewing rules during play.
+The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase. The New Game button now lives in a top-right utility area next to an indexed in-game Rulebook button for reviewing rules during play. Threat indicators now appear directly on Location buttons, threat movement is shown step-by-step with direction arrows, and the event log reports specific movement, worker loss, Clout loss, defense use, and Location deck damage.
 
 To run it locally, open this repository as a Unity project and load `Assets/Scenes/JunkStormPrototype.unity`. The scene contains a `JunkStormUnityController` entry point that builds the prototype UI at runtime.
 
@@ -15,7 +15,7 @@ The planet is ruined. The wealthy have fled into protected biodomes, leaving the
 
 Junk Storm is a competitive deckbuilding board game for 2–4 players.
 
-Players build personal decks by scavenging at outposts, use resources to construct buildings, gain Clout, and race to complete a Tier 3 future-defining project.
+Players build personal decks by scavenging at locations, use resources to construct buildings, gain Clout, and race to complete a Tier 3 future-defining project.
 
 ## 2. Goal of the Game
 
@@ -59,7 +59,7 @@ A generation is one complete round of play consisting of four phases:
 For a first prototype, use:
 
 * 1 Colony board
-* 5 Outpost spaces
+* 5 Location spaces
 * 1 Wilderness space
 * 1 Biodome space
 * 1 Junk Storm token
@@ -67,7 +67,7 @@ For a first prototype, use:
 * Worker tokens
 * Clout trackers
 * Player decks
-* Outpost scavenge decks
+* Location scavenge decks
 * Biodome special deck
 * Building cards or tiles
 * Character cards
@@ -93,11 +93,11 @@ Shuffle each player’s starter deck.
 
 Each player draws **5 cards**.
 
-Place the Junk Storm token on Outpost 1.
+Place the Junk Storm token on Location 1.
 
-Place the Biodomer token on Outpost 4.
+Place the Biodomer token on Location 4.
 
-Shuffle each Outpost deck and place it near the matching Outpost.
+Shuffle each Location deck and place it near the matching Location.
 
 Shuffle the Biodome special deck and place it near the Biodome.
 
@@ -198,19 +198,19 @@ A player may choose only one Expedition Bonus per generation.
 
 ## Step 2: Declare Expedition
 
-In turn order, each player may send workers to one Outpost, the Biodome, or the Wilderness.
+In turn order, each player may send workers to one Location, the Biodome, or the Wilderness.
 
 A player may bring workers up to their current Clout.
 
 Example: A player with 4 Clout may bring up to 4 workers.
 
-A player cannot go to an Outpost currently occupied by the Junk Storm or Biodomers.
+A player cannot go to a Location with the Junk Storm or Biodomers; that Location is unsafe.
 
 ## Step 3: Resolve Expedition
 
-### Scavenging at an Outpost
+### Scavenging at a Location
 
-For each worker you brought, draw 1 card from that Outpost’s scavenge deck.
+For each worker you brought, draw 1 card from that Location’s scavenge deck.
 
 Example: If you brought 3 workers, draw 3 scavenge cards.
 
@@ -283,7 +283,7 @@ Even result: move clockwise.
 
 ## Distance
 
-Move the token a number of Outpost spaces equal to:
+Move the token a number of Location spaces equal to:
 
 * Junk Storm: the number rolled.
 * Biodomers: the number rolled minus 5.
@@ -292,13 +292,13 @@ Example: A roll of 8 means the Biodomers move 3 spaces clockwise.
 
 ## Junk Storm Effects
 
-The Junk Storm affects every Outpost it passes over, including the space where it lands.
+The Junk Storm affects every Location it passes over, including the space where it lands.
 
-For each Outpost the Junk Storm passes over:
+For each Location the Junk Storm passes over:
 
-* Destroy the top card of that Outpost’s scavenge deck.
+* Destroy the top card of that Location’s scavenge deck.
 
-If a player is at an affected Outpost:
+If a player is at an affected Location:
 
 * That player destroys the top card of their deck.
 * All workers that player brought on the expedition die.
@@ -308,7 +308,7 @@ A player may destroy a Storm Shield from hand to cancel all Junk Storm effects a
 
 ## Biodomer Effects
 
-The Biodomers attack any player at the Outpost where they land.
+The Biodomers attack any player at the Location where they land.
 
 When attacked by Biodomers, a player loses 2 workers.
 
@@ -340,27 +340,27 @@ If a player’s deck runs out, shuffle their discard pile to form a new deck.
 
 ---
 
-## 9. Outposts
+## 9. Locations
 
-Each Outpost has its own scavenge deck.
+Each Location has its own scavenge deck.
 
-### Outpost 1 — City Ruins
+### Location 1 — City Ruins
 
 Contains: Alloy, Organics, Plastoid, Attack cards, Event cards.
 
-### Outpost 2 — Suburbs
+### Location 2 — Suburbs
 
 Contains: Organics, Plastoid, Dweller-style cards, Passive cards, Event cards.
 
-### Outpost 3 — Abandoned Research Facility
+### Location 3 — Abandoned Research Facility
 
 Contains: Alloy, Plastoid, Laboratory cards, Passive cards, Defense cards.
 
-### Outpost 4 — Abandoned Military Base
+### Location 4 — Abandoned Military Base
 
 Contains: Alloy, Plastoid, Soldier cards, Weapon cards, Attack cards.
 
-### Outpost 5 — Farmlands
+### Location 5 — Farmlands
 
 Contains: Organics, Worker cards, Dweller cards, Event cards.
 
@@ -372,9 +372,9 @@ No scavenge deck.
 
 Contains only Special cards.
 
-## 10. Recommended Prototype Outpost Decks
+## 10. Recommended Prototype Location Decks
 
-For the first playtest, make each Outpost deck 15 cards.
+For the first playtest, make each Location deck 15 cards.
 
 ### City Ruins Deck
 
@@ -550,7 +550,7 @@ Gain 1 worker token and 1 Clout.
 
 ### Unexpected Haul
 
-Look at the top 2 cards of the current Outpost deck. Choose one and place it in your discard pile. Shuffle the other back into the Outpost deck.
+Look at the top 2 cards of the current Location deck. Choose one and place it in your discard pile. Shuffle the other back into the Location deck.
 
 ### Trouble Returning Home
 
@@ -628,7 +628,7 @@ Expedition Bonus: When scavenging, you may place any Alloy or Plastoid you scave
 
 Cost: 3 Organics, 1 Alloy or 1 Plastoid + 1 Labor
 Player Bonus: Gain 2 Clout.
-Expedition Bonus: If another player declares an expedition to your Outpost after you, draw 2 additional scavenge cards.
+Expedition Bonus: If another player declares an expedition to your Location after you, draw 2 additional scavenge cards.
 
 ### Apartment Building
 
@@ -757,7 +757,7 @@ After the first playtest, answer these:
 2. Did the Junk Storm feel scary but fair?
 3. Did players have enough ways to recover after losing workers?
 4. Did buildings feel worth the cost?
-5. Did each Outpost feel meaningfully different?
+5. Did each Location feel meaningfully different?
 6. Did the Biodome feel tempting enough?
 7. Did the game end before it became repetitive?
 8. Did players feel like they had meaningful choices each generation?
