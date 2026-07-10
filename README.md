@@ -5,7 +5,7 @@
 
 A lightweight two-player Unity prototype is included for early loop testing. It supports the first pass of the core flow: choosing outposts, scavenging cards, recycling or destroying hand cards for resources, building early infrastructure, resolving the Junk Storm/Biodomers die, and resetting into the next generation.
 
-The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase.
+The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase. The New Game button now lives in a top-right utility area next to an indexed in-game Rulebook button for reviewing rules during play.
 
 To run it locally, open this repository as a Unity project and load `Assets/Scenes/JunkStormPrototype.unity`. The scene contains a `JunkStormUnityController` entry point that builds the prototype UI at runtime.
 
