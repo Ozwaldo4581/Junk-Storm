@@ -3,9 +3,9 @@
 
 ## Unity Prototype
 
-A lightweight two-player Unity prototype is included for early loop testing. It supports the first pass of the core flow: choosing locations, scavenging cards, recycling or destroying hand cards for resources, building early infrastructure, resolving the Junk Storm/Biodomers die, and resetting into the next generation.
+A lightweight two-player Unity prototype is included for early loop testing. It supports the first pass of the core flow: choosing locations, scavenging cards, recycling or discarding hand cards for resources, building early infrastructure, resolving the Junk Storm/Biodomers die, and resetting into the next generation.
 
-The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase. The New Game button now lives in a top-right utility area next to an indexed in-game Rulebook button for reviewing rules during play. The main play area now uses a three-column layout: generation/player info on the left, cards/hand/actions in the center, and a pentagon Location board on the right. Location card counts and threat indicators appear directly on the pentagon Location buttons, threat movement is shown step-by-step with direction arrows, and the event log reports specific movement, worker loss, Clout loss, defense use, and Location deck damage. The center panel now includes a Shop / Build window that lists all Tier 1, Tier 2, and Tier 3 buildings; greyed-out entries remain hoverable/clickable so players can see costs, requirements, and why a purchase is unavailable. During Expedition, click a Location button once per worker you want to assign, then Confirm Expedition; use Clear Expedition Selection or Remove 1 Worker to adjust before confirming. The prototype also shows the rotating First Player and turn order, and players sharing a Location can use Soldier cards for attacks and defense.
+The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them. Mixed Alloy/Plastoid building costs are auto-paid with Alloy first, then Plastoid. Stored materials persist, while temporary Labor resets during the Reset Phase. The New Game button now lives in a top-right utility area next to an indexed in-game Rulebook button for reviewing rules during play. The main play area now uses a three-column layout: generation/player info on the left, cards/hand/actions in the center, and a pentagon Location board on the right. Location card counts and threat indicators appear directly on the pentagon Location buttons, threat movement is shown step-by-step with direction arrows, and the event log reports specific movement, worker loss, Clout loss, defense use, and Location deck damage. The center panel now includes a Shop / Build window that lists all Tier 1, Tier 2, and Tier 3 buildings; greyed-out entries remain hoverable/clickable so players can see costs, requirements, and why a purchase is unavailable. During Expedition, click a Location button once per worker you want to assign, then Confirm Expedition; use Skip Expedition to send 0 workers, or use Clear Expedition Selection / Remove 1 Worker to adjust before confirming. The prototype also shows the rotating First Player and turn order, and players sharing a Location can use Soldier cards for attacks and defense.
 
 To run it locally, open this repository as a Unity project and load `Assets/Scenes/JunkStormPrototype.unity`. The scene contains a `JunkStormUnityController` entry point that builds the prototype UI at runtime.
 
@@ -33,7 +33,7 @@ If multiple players meet the victory condition in the same generation, the playe
 **Clout**
 Clout represents social influence, morale, leadership, and political power. It determines how many workers a player can bring on expeditions and whether they qualify for advanced buildings.
 
-All players start with **1 Clout**. Clout cannot drop below 1.
+All players start with **1 Clout**. During the Action Phase, a player may voluntarily spend 1 Clout to gain 1 worker token, or spend 1 Clout to add 1 Worker card to their Recycle Pile. A Clout purchase is only available if the player has at least 2 Clout, because voluntary spending must leave the player with at least 1 Clout. Forced Clout loss from hazards, Biodomers, attacks, or other non-chosen effects can reduce Clout to 0; when it does, that player is immediately eliminated.
 
 **Workers**
 Workers are people willing to follow a player into danger. Workers are represented by tokens. Workers are used during expeditions and may die to the Junk Storm, Biodomers, events, or attacks.
@@ -41,10 +41,10 @@ Workers are people willing to follow a player into danger. Workers are represent
 Each player starts with **3 worker tokens**.
 
 **Recycle**
-When a card is recycled, use its recycle ability and place it in your discard pile.
+When a card is recycled, use its recycle ability and place it in your Recycle Pile. Recycle Pile cards remain in your deck cycle and are shuffled into a new Draw Pile when needed.
 
-**Destroy**
-When a card is destroyed, use its destroy ability and remove it from the game.
+**Discard**
+When a card is discarded, use its discard ability and place it in the Discard Pile, permanently removed from the game. The Discard Pile is never reshuffled into the Draw Pile.
 
 **Generation**
 A generation is one complete round of play consisting of four phases:
@@ -108,39 +108,39 @@ Randomly determine first player. First player rotates clockwise at the end of ea
 ### Dweller
 
 Recycle: Gain 1 Clout.
-Destroy: Gain 2 Clout.
+Discard: Gain 2 Clout.
 
 ### Worker
 
 Recycle: Gain 1 Labor this generation.
-Destroy: Gain 2 Labor this generation.
+Discard: Gain 2 Labor this generation.
 
-Labor is a temporary generation resource used to build buildings. The Worker card is different from worker tokens. Worker tokens are followers sent on expeditions; the Worker card is a deck card with recycle and destroy effects.
+Labor is a temporary generation resource used to build buildings. The Worker card is different from worker tokens. Worker tokens are followers sent on expeditions; the Worker card is a deck card with recycle and discard effects.
 
 ### Soldier
 
 Recycle: Gain 1 Defense Strength this generation.
-Destroy: Choose one: cancel one Biodomer attack against you, attack another player at your Location, or defend yourself or another player at your Location from a Soldier attack.
+Discard: Choose one: cancel one Biodomer attack against you, attack another player at your Location, or defend yourself or another player at your Location from a Soldier attack.
 
 ### Storm Shield
 
 Recycle: Draw 1 card.
-Destroy: Cancel all Junk Storm effects against you this generation.
+Discard: Cancel all Junk Storm effects against you this generation.
 
 ### Alloy
 
 Recycle: Generate 1 Alloy.
-Destroy: Generate 2 Alloy.
+Discard: Generate 2 Alloy.
 
 ### Organics
 
 Recycle: Generate 1 Organics.
-Destroy: Generate 2 Organics.
+Discard: Generate 2 Organics.
 
 ### Plastoid
 
 Recycle: Generate 1 Plastoid.
-Destroy: Generate 2 Plastoid.
+Discard: Generate 2 Plastoid.
 
 Alloy, Organics, and Plastoid are stored resources. They persist between turns and generations until spent on buildings. Labor is temporary and resets during the Reset Phase.
 
@@ -200,11 +200,11 @@ A player may choose only one Expedition Bonus per generation.
 
 In turn order, starting with the current First Player, each player may send workers to one Location, the Biodome, or the Wilderness.
 
-A player may bring workers up to their current Clout.
+A player may bring workers up to their current Clout, or may send 0 workers and skip their expedition.
 
 Example: A player with 4 Clout may bring up to 4 workers.
 
-In the Unity prototype, click a valid Location once to assign 1 worker, click the same Location again to assign another worker, or click a different valid Location to switch destinations and reset the assignment to 1 worker. Click **Confirm Expedition** to send the assigned workers. Click **Clear Expedition Selection** to start over, or **Remove 1 Worker** to reduce the assignment.
+In the Unity prototype, click a valid Location once to assign 1 worker, click the same Location again to assign another worker, or click a different valid Location to switch destinations and reset the assignment to 1 worker. Click **Confirm Expedition** to send the assigned workers, or **Skip Expedition** to send 0 workers without selecting a Location. Click **Clear Expedition Selection** to start over, or **Remove 1 Worker** to reduce the assignment.
 
 A player cannot go to a Location with the Junk Storm or Biodomers; that Location is unsafe.
 
@@ -216,9 +216,9 @@ For each worker you brought, draw 1 card from that Location’s scavenge deck.
 
 Example: If you brought 3 workers, draw 3 scavenge cards.
 
-If you draw an Event card, resolve it immediately and destroy it.
+If you draw an Event card, resolve it immediately and discard it.
 
-All non-Event cards you scavenge go into your discard pile unless an Expedition Bonus says otherwise.
+All non-Event cards you scavenge go into your Recycle Pile unless an Expedition Bonus says otherwise.
 
 ### Invading the Biodome
 
@@ -228,9 +228,9 @@ When you invade:
 
 * Lose all 5 workers.
 * Lose 5 Clout.
-* Draw 1 card from the Biodome special deck and place it in your discard pile.
+* Draw 1 card from the Biodome special deck and place it in your Recycle Pile.
 
-Your Clout cannot drop below 1.
+This is forced Clout loss. If it reduces your Clout to 0, you are immediately eliminated.
 
 ### Entering the Wilderness
 
@@ -253,16 +253,17 @@ All players continue using the cards in their current hands.
 In turn order, each player may do the following:
 
 1. Play any number of cards from hand.
-2. Use Recycle or Destroy abilities.
-3. Build up to one building.
-4. Use one character special action, if available.
-5. Use Attack, Defense, or Passive cards when appropriate.
+2. Use Recycle or Discard abilities.
+3. If you have at least 2 Clout, spend 1 Clout to gain 1 worker token or spend 1 Clout to add 1 Worker card to your Recycle Pile. You must retain at least 1 Clout.
+4. Build up to one building.
+5. Use one character special action, if available.
+6. Use Attack, Defense, or Passive cards when appropriate.
 
-Players may play as many cards as they want, but each card must be either recycled or destroyed when played.
+Players may play as many cards as they want, but each card must be either recycled or discarded when played. Recycled cards return through future reshuffles; discarded cards are permanently removed.
 
 ## Soldier Conflict
 
-During the Action Phase, a player at a non-Colony Location may destroy a Soldier card to attack another player at the same Location. If the attack is undefended, the attacker steals 1 random card from the target player's hand and places it in their discard pile. The target may destroy a Soldier from hand to cancel the attack; if the target cannot defend, another player at that same Location may destroy Soldier to defend the target. Soldier attacks are not allowed at the Colony.
+During the Action Phase, a player at a non-Colony Location may discard a Soldier card to attack another player at the same Location. If the attack is undefended, it succeeds: the attacker steals 1 random card from the target player's hand, if one is available, and places it in their Recycle Pile. The target also loses 1 Clout whether or not a card was available to steal. The target may discard a Soldier from hand to cancel the attack; if the target cannot defend, another player at that same Location may discard Soldier to defend the target. Because this is forced Clout loss, the target is immediately eliminated if the attack reduces their Clout to 0. Soldier attacks are not allowed at the Colony.
 
 ## Building Limit
 
@@ -302,15 +303,15 @@ The Junk Storm affects every Location it passes over, including the space where 
 
 For each Location the Junk Storm passes over:
 
-* Destroy the top card of that Location’s scavenge deck.
+* Discard the top card of that Location’s scavenge deck.
 
 If a player is at an affected Location:
 
-* That player destroys the top card of their deck.
+* That player discards the top card of their Draw Pile.
 * All workers that player brought on the expedition die.
 * The player loses 1 Clout for each worker lost.
 
-A player may destroy a Storm Shield from hand to cancel all Junk Storm effects against them for that generation.
+A player may discard a Storm Shield from hand to cancel all Junk Storm effects against them for that generation.
 
 ## Biodomer Effects
 
@@ -320,7 +321,7 @@ When attacked by Biodomers, a player loses 2 workers.
 
 For each worker lost this way, lose 1 Clout.
 
-A player may destroy a Soldier or Weapon Outfitting card from hand to cancel the Biodomer attack.
+A player may discard a Soldier or Weapon Outfitting card from hand to cancel the Biodomer attack.
 
 If a player has fewer than 2 workers, they lose all remaining workers and lose Clout equal to the number of workers lost.
 
@@ -328,7 +329,7 @@ If a player has fewer than 2 workers, they lose all remaining workers and lose C
 
 # Phase IV — Reset Phase
 
-Each player may discard any number of cards remaining in hand.
+Each player may move any number of cards remaining in hand to their Recycle Pile.
 
 All surviving workers return to their player.
 
@@ -342,7 +343,7 @@ Rotate first player clockwise.
 
 Each player draws back up to 5 cards.
 
-If a player’s deck runs out, shuffle their discard pile to form a new deck.
+If a player’s Draw Pile runs out, shuffle their Recycle Pile to form a new Draw Pile. Never shuffle the Discard Pile back into the Draw Pile.
 
 ---
 
@@ -440,17 +441,17 @@ Resource cards add permanent stored resources used for buildings. Stored Alloy, 
 ### Alloy
 
 Recycle: Generate 1 Alloy.
-Destroy: Generate 2 Alloy.
+Discard: Generate 2 Alloy.
 
 ### Organics
 
 Recycle: Generate 1 Organics.
-Destroy: Generate 2 Organics.
+Discard: Generate 2 Organics.
 
 ### Plastoid
 
 Recycle: Generate 1 Plastoid.
-Destroy: Generate 2 Plastoid.
+Discard: Generate 2 Plastoid.
 
 ---
 
@@ -462,7 +463,7 @@ A player may cancel an Attack card by revealing and recycling Preemptive Intelli
 
 ### Thieving Resources
 
-Play immediately after another player scavenges. That player reveals the cards they scavenged. Choose one Resource card they scavenged and place it in your discard pile.
+Play immediately after another player scavenges. That player reveals the cards they scavenged. Choose one Resource card they scavenged and place it in your Recycle Pile.
 
 ### Spreading Rumors
 
@@ -490,11 +491,11 @@ Defense cards protect against attacks, the Junk Storm, or Biodomers.
 
 ### Storm Shield
 
-Destroy: Cancel all Junk Storm effects against you this generation.
+Discard: Cancel all Junk Storm effects against you this generation.
 
 ### Weapon Outfitting
 
-Destroy: Cancel one Biodomer attack against you.
+Discard: Cancel one Biodomer attack against you.
 
 ### Preemptive Intelligence
 
@@ -538,13 +539,13 @@ Recycle: Draw 2 cards.
 
 ### Recycled Technologies
 
-Recycle: Take one Action, Defense, or Passive card from your discard pile and place it into your hand.
+Recycle: Take one Action, Defense, or Passive card from your Recycle Pile and place it into your hand.
 
 ---
 
 ## Event Cards
 
-Event cards resolve immediately when scavenged, then are destroyed.
+Event cards resolve immediately when scavenged, then are discarded.
 
 ### Unforeseen Death
 
@@ -556,11 +557,11 @@ Gain 1 worker token and 1 Clout.
 
 ### Unexpected Haul
 
-Look at the top 2 cards of the current Location deck. Choose one and place it in your discard pile. Shuffle the other back into the Location deck.
+Look at the top 2 cards of the current Location deck. Choose one and place it in your Recycle Pile. Shuffle the other back into the Location deck.
 
 ### Trouble Returning Home
 
-Destroy 1 card from your hand.
+Discard 1 card from your hand.
 
 ---
 
@@ -610,7 +611,7 @@ When you build a Tier 1 building, gain 2 Clout.
 
 Cost: 4 Organics + 1 Labor
 Player Bonus: Gain 2 Clout.
-Expedition Bonus: When scavenging, you may place any Organics you scavenge on top of your deck instead of in your discard pile.
+Expedition Bonus: When scavenging, you may place any Organics you scavenge on top of your Draw Pile instead of in your Recycle Pile.
 
 ### Military Base
 
@@ -622,13 +623,13 @@ Expedition Bonus: If Biodomers attack you this generation and you cannot defend,
 
 Cost: 1 Alloy, 3 Plastoid + 1 Labor
 Player Bonus: Gain 2 Clout.
-Expedition Bonus: If the Junk Storm affects you this generation and you cannot defend, destroy 1 fewer card from your deck.
+Expedition Bonus: If the Junk Storm affects you this generation and you cannot defend, discard 1 fewer card from your Draw Pile.
 
 ### Transportation Station
 
 Cost: 2 Alloy, 2 Plastoid + 1 Labor
 Player Bonus: Gain 2 Clout.
-Expedition Bonus: When scavenging, you may place any Alloy or Plastoid you scavenge on top of your deck instead of in your discard pile.
+Expedition Bonus: When scavenging, you may place any Alloy or Plastoid you scavenge on top of your Draw Pile instead of in your Recycle Pile.
 
 ### Town Hall
 
@@ -671,7 +672,7 @@ Expedition Bonus: For each worker you bring, scavenge 1 additional card.
 Requirement: Military Base + any other Tier 1 building
 Cost: 4 Alloy, 3 Plastoid + 2 Labor
 Builder Bonus: Gain 2 Clout.
-Colony Bonus: Each player adds 1 Weapon Outfitting card to their discard pile.
+Colony Bonus: Each player adds 1 Weapon Outfitting card to their Recycle Pile.
 Expedition Bonus: You are unaffected by Biodomers this generation.
 
 ### Internet Servers
@@ -688,7 +689,7 @@ Requirement: Transportation Station + any other Tier 1 building
 Cost: 2 Organics, plus 3 total Alloy/Plastoid in any combination + 2 Labor
 Builder Bonus: Gain 2 Clout.
 Colony Bonus: Each player may bring 1 additional worker on expeditions.
-Expedition Bonus: You may place any scavenged cards on top of your deck instead of in your discard pile.
+Expedition Bonus: You may place any scavenged cards on top of your Draw Pile instead of in your Recycle Pile.
 
 ---
 
