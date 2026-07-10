@@ -9,9 +9,12 @@ public sealed class JunkStormUnityController : MonoBehaviour
     [SerializeField] private Font uiFont;
 
     private JunkStormGame game;
+    private const string DefaultInfoText = "Hover over a button for details.";
+
     private Transform boardRoot;
     private Transform controlRoot;
     private Transform logRoot;
+    private Text infoBannerText;
 
     private void Awake()
     {
@@ -35,13 +38,18 @@ public sealed class JunkStormUnityController : MonoBehaviour
         Stretch(root.GetComponent<RectTransform>());
 
         var title = CreateText(root.transform, "Title", "Junk Storm", 48, FontStyle.Bold, Color.white);
-        Anchor(title.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(32, -82), new Vector2(-32, -16));
+        Anchor(title.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(32, -74), new Vector2(-32, -16));
+
+        var infoBanner = CreateBackgroundPanel(root.transform, "Info Banner", new Color(0.16f, 0.11f, 0.07f));
+        Anchor(infoBanner.GetComponent<RectTransform>(), new Vector2(0, 1), new Vector2(1, 1), new Vector2(32, -128), new Vector2(-32, -78));
+        infoBannerText = CreateText(infoBanner.transform, "Info Text", DefaultInfoText, 20, FontStyle.Bold, new Color(1f, 0.81f, 0.46f));
+        Stretch(infoBannerText.rectTransform, 16, -8, -16, 8);
 
         boardRoot = CreateScrollablePanel(root.transform, "Board", new Color(0.14f, 0.10f, 0.08f));
-        Anchor((RectTransform)boardRoot.parent.parent, new Vector2(0, 0.28f), new Vector2(0.66f, 0.9f), new Vector2(32, 18), new Vector2(-14, -96));
+        Anchor((RectTransform)boardRoot.parent.parent, new Vector2(0, 0.28f), new Vector2(0.66f, 0.86f), new Vector2(32, 18), new Vector2(-14, -136));
 
         controlRoot = CreateScrollablePanel(root.transform, "Controls", new Color(0.12f, 0.09f, 0.08f));
-        Anchor((RectTransform)controlRoot.parent.parent, new Vector2(0.66f, 0.28f), new Vector2(1, 0.9f), new Vector2(14, 18), new Vector2(-32, -96));
+        Anchor((RectTransform)controlRoot.parent.parent, new Vector2(0.66f, 0.28f), new Vector2(1, 0.86f), new Vector2(14, 18), new Vector2(-32, -136));
 
         logRoot = CreateScrollablePanel(root.transform, "Log", new Color(0.10f, 0.08f, 0.07f));
         Anchor((RectTransform)logRoot.parent.parent, new Vector2(0, 0), new Vector2(1, 0.28f), new Vector2(32, 18), new Vector2(-32, -16));
@@ -98,7 +106,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
         {
             game.NewGame();
             Render();
-        });
+        }, true, "New Game — Restart the prototype from Generation 1 with freshly shuffled decks and reset player state.");
 
         if (game.CurrentPhase == Phase.Expedition)
         {
@@ -108,7 +116,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
                 {
                     game.Scavenge(indexedOutpost.index);
                     Render();
-                });
+                }, true, GetExpeditionTooltip(indexedOutpost.outpost.Name, indexedOutpost.index));
             }
         }
         else if (game.CurrentPhase == Phase.Action)
@@ -121,28 +129,29 @@ public sealed class JunkStormUnityController : MonoBehaviour
                 {
                     game.PlayCard(handIndex, false);
                     Render();
-                });
+                }, true, $"Recycle {card} — Use the card's recycle effect, then place it in your discard pile. {GetCardTooltip(card)}");
                 CreateButton(controlRoot, $"Destroy {card}", () =>
                 {
                     game.PlayCard(handIndex, true);
                     Render();
-                });
+                }, true, $"Destroy {card} — Use the card's stronger destroy effect, then remove it from the game. {GetCardTooltip(card)}");
             }
 
             foreach (var building in game.Buildings)
             {
+                var canBuild = game.CanBuild(building);
                 CreateButton(controlRoot, $"Build {building.Name}", () =>
                 {
                     game.Build(building.Name);
                     Render();
-                }, game.CanBuild(building));
+                }, canBuild, GetBuildingTooltip(building, canBuild));
             }
 
             CreateButton(controlRoot, "End Action", () =>
             {
                 game.EndActionTurn();
                 Render();
-            });
+            }, true, "End Action — Finish this player's Action Phase turn and continue to the next player or the Junk Storm Phase.");
         }
         else if (game.CurrentPhase == Phase.Storm)
         {
@@ -150,7 +159,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
             {
                 game.ResolveStormRoll();
                 Render();
-            });
+            }, true, "Roll Junk Storm Die — Resolve the generation's hazard roll. 1–5 moves the Junk Storm; 6–10 moves the Biodomers.");
         }
         else if (game.CurrentPhase == Phase.Reset)
         {
@@ -158,7 +167,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
             {
                 game.ResetGeneration();
                 Render();
-            });
+            }, true, "Reset Generation — Discard remaining hands, clear temporary resources, draw back up, check victory, and start the next generation.");
         }
         else
         {
@@ -173,6 +182,129 @@ public sealed class JunkStormUnityController : MonoBehaviour
     }
 
 
+    public void SetInfo(string message)
+    {
+        if (infoBannerText != null)
+        {
+            infoBannerText.text = string.IsNullOrWhiteSpace(message) ? DefaultInfoText : message;
+        }
+    }
+
+    public void ClearInfo()
+    {
+        SetInfo(DefaultInfoText);
+    }
+
+    private string GetCardTooltip(string cardName)
+    {
+        if (!game.Cards.TryGetValue(cardName, out var card))
+        {
+            return cardName;
+        }
+
+        var notes = cardName switch
+        {
+            "Storm Shield" => "Timing: destroy from hand to cancel all Junk Storm effects against you this generation.",
+            "Soldier" => "Timing: destroy from hand to cancel one Biodomer attack against you.",
+            "Weapon Outfitting" => "Timing: destroy from hand to cancel one Biodomer attack against you.",
+            "Preemptive Intelligence" => "Timing: recycle to cancel one Attack card targeting you.",
+            _ => string.Empty
+        };
+
+        return $"{card.Name} — {card.Type}. Recycle: {DescribeEffect(card.Recycle)} Destroy: {DescribeEffect(card.Destroy)} {notes}".Trim();
+    }
+
+    private string GetBuildingTooltip(BuildingDefinition building, bool canBuild)
+    {
+        var requirement = string.IsNullOrWhiteSpace(building.Requires) ? "None" : building.Requires;
+        var bonus = building.CloutReward > 0 ? $"Gain {building.CloutReward} Clout when built." : "Completes a Tier 3 victory project.";
+        var expeditionBonus = GetBuildingBonusText(building.Name);
+        var status = canBuild ? "Currently: can build." : $"Currently: cannot build — {GetBuildBlocker(building)}";
+        return $"{building.Name} — Tier {building.Tier}. Cost: {DescribeCost(building.Cost)}. Requirement: {requirement}. {bonus} {expeditionBonus} {status}";
+    }
+
+    private string GetExpeditionTooltip(string outpostName, int outpostIndex)
+    {
+        if (outpostIndex == game.JunkStormOutpost)
+        {
+            return $"{outpostName} — Unavailable because the Junk Storm currently occupies this outpost.";
+        }
+
+        if (outpostIndex == game.BiodomerOutpost)
+        {
+            return $"{outpostName} — Unavailable because the Biodomers currently occupy this outpost.";
+        }
+
+        return $"Scavenge {outpostName} — Send {game.ActivePlayer.Name}'s available workers up to their Clout limit and draw that many cards from this outpost deck.";
+    }
+
+    private string GetBuildBlocker(BuildingDefinition building)
+    {
+        if (game.ActivePlayer.Buildings.Contains(building.Name))
+        {
+            return "already built";
+        }
+
+        if (building.MinClout > 0 && game.ActivePlayer.Clout < building.MinClout)
+        {
+            return $"requires {building.MinClout} Clout";
+        }
+
+        if (!string.IsNullOrWhiteSpace(building.Requires) && !game.ActivePlayer.Buildings.Contains(building.Requires))
+        {
+            return $"requires {building.Requires}";
+        }
+
+        if (building.Tier == 2 && game.ActivePlayer.Buildings.Count < 2)
+        {
+            return "requires two Tier 1 buildings";
+        }
+
+        return "cannot afford the resource/Labor cost";
+    }
+
+    private static string GetBuildingBonusText(string buildingName)
+    {
+        return buildingName switch
+        {
+            "Farm" => "Expedition Bonus: scavenged Organics may go on top of your deck.",
+            "Military Base" => "Expedition Bonus: lose 1 fewer worker if Biodomers attack and you cannot defend.",
+            "Laboratory" => "Expedition Bonus: destroy 1 fewer deck card if the Junk Storm affects you and you cannot defend.",
+            "Transportation Station" => "Expedition Bonus: scavenged Alloy or Plastoid may go on top of your deck.",
+            "Farming Center" => "Colony Bonus: each player gains 1 worker token. Expedition Bonus: scavenge 1 additional card per worker.",
+            "Terraforming Station" => "Victory Meaning: terraform the planet and make Earth livable again.",
+            _ => string.Empty
+        };
+    }
+
+    private static string DescribeEffect(Effect effect)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        if (effect.Clout != 0) parts.Add($"Gain {effect.Clout} Clout");
+        if (effect.Workers != 0) parts.Add($"Gain {effect.Workers} worker(s)");
+        if (effect.Alloy != 0) parts.Add($"Generate {effect.Alloy} Alloy");
+        if (effect.Organics != 0) parts.Add($"Generate {effect.Organics} Organics");
+        if (effect.Plastoid != 0) parts.Add($"Generate {effect.Plastoid} Plastoid");
+        if (effect.Labor != 0) parts.Add($"Generate {effect.Labor} Labor this generation");
+        if (effect.Defense != 0) parts.Add($"Gain {effect.Defense} Defense Strength this generation");
+        if (effect.Draw != 0) parts.Add($"Draw {effect.Draw} card(s)");
+        if (effect.TargetCloutLoss != 0) parts.Add($"Target loses {effect.TargetCloutLoss} Clout");
+        if (effect.TargetWorkerLoss != 0) parts.Add($"Target loses {effect.TargetWorkerLoss} worker(s)");
+        if (effect.StormShield) parts.Add("Cancel all Junk Storm effects against you this generation");
+        if (effect.BiodomeShield) parts.Add("Cancel one Biodomer attack against you");
+        return parts.Count == 0 ? "No effect." : string.Join(", ", parts) + ".";
+    }
+
+    private static string DescribeCost(ResourcePool cost)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        if (cost.Organics > 0) parts.Add($"{cost.Organics} Organics");
+        if (cost.Alloy > 0) parts.Add($"{cost.Alloy} Alloy");
+        if (cost.Plastoid > 0) parts.Add($"{cost.Plastoid} Plastoid");
+        if (cost.Labor > 0) parts.Add($"{cost.Labor} Labor");
+        return parts.Count == 0 ? "Free" : string.Join(" + ", parts);
+    }
+
     private static void EnsureEventSystem()
     {
         if (EventSystem.current != null)
@@ -184,7 +316,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
         DontDestroyOnLoad(eventSystem);
     }
 
-    private Button CreateButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick, bool interactable = true)
+    private Button CreateButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick, bool interactable = true, string tooltipText = null)
     {
         var buttonObject = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
         buttonObject.transform.SetParent(parent, false);
@@ -200,7 +332,14 @@ public sealed class JunkStormUnityController : MonoBehaviour
         var text = CreateText(buttonObject.transform, "Label", label, 17, FontStyle.Bold, new Color(0.12f, 0.08f, 0.06f));
         Stretch(text.rectTransform, 8, -4, -8, 4);
         text.alignment = TextAnchor.MiddleCenter;
+        AddTooltip(buttonObject, tooltipText ?? label);
         return button;
+    }
+
+    private void AddTooltip(GameObject target, string tooltipText)
+    {
+        var trigger = target.AddComponent<TooltipTrigger>();
+        trigger.Initialize(this, tooltipText);
     }
 
     private Text CreateText(Transform parent, string name, string value, int size, FontStyle style, Color color)
@@ -293,5 +432,27 @@ public sealed class JunkStormUnityController : MonoBehaviour
         rectTransform.anchorMax = max;
         rectTransform.offsetMin = offsetMin;
         rectTransform.offsetMax = offsetMax;
+    }
+}
+
+public sealed class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    private JunkStormUnityController owner;
+    private string message;
+
+    public void Initialize(JunkStormUnityController tooltipOwner, string tooltipMessage)
+    {
+        owner = tooltipOwner;
+        message = tooltipMessage;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        owner?.SetInfo(message);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        owner?.ClearInfo();
     }
 }

@@ -5,6 +5,8 @@
 
 A lightweight two-player Unity prototype is included for early loop testing. It supports the first pass of the core flow: choosing outposts, scavenging cards, recycling or destroying hand cards for resources, building early infrastructure, resolving the Junk Storm/Biodomers die, and resetting into the next generation.
 
+The prototype includes a top info banner. Hover over generated buttons to see card, building, and action explanations before choosing them.
+
 To run it locally, open this repository as a Unity project and load `Assets/Scenes/JunkStormPrototype.unity`. The scene contains a `JunkStormUnityController` entry point that builds the prototype UI at runtime.
 
 ## 1. Game Overview
