@@ -37,7 +37,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
         new RulebookSection("Action Phase", "During your Action turn, you may recycle or destroy cards from hand, generate stored resources, generate temporary Labor, use card effects, build up to one building, use available special actions, and end your turn. Players at the same Location may destroy Soldier to attack; if undefended, the attacker steals 1 random card from the target hand. The target or another player at that Location may destroy Soldier to defend.\n\nA player may play any number of cards from hand. Each played card must be recycled or destroyed. A player may build at most one building per generation. Stored resources persist. Temporary Labor resets during Reset."),
         new RulebookSection("Junk Storm Phase", "Roll 1d10. On 1–5, move the Junk Storm. On 6–10, move the Biodomers. Odd rolls move counterclockwise; even rolls move clockwise. Junk Storm moves spaces equal to the roll. Biodomers move spaces equal to the roll minus 5.\n\nJunk Storm movement is shown one Location at a time. The arrow indicates direction. Junk Storm affects every Location it passes over, including where it lands. Destroy the top card of each affected Location deck. Players at affected Locations destroy the top card of their deck, lose all expedition workers, and lose 1 Clout per worker lost. Storm Shield can cancel this.\n\nBiodomers movement is shown one Location at a time. Biodomers attack players where they land. An attacked player loses 2 worker tokens and 1 Clout per worker lost. Soldier or Weapon Outfitting can cancel this."),
         new RulebookSection("Reset Phase", "During Reset:\n\n- Each player may discard remaining cards.\n- Surviving expedition workers return.\n- Player tokens return to the Colony.\n- Temporary Labor resets to 0.\n- Stored resources remain.\n- Per-generation flags reset.\n- Each player draws back up to 5 cards.\n- Victory is checked.\n- First player rotates clockwise."),
-        new RulebookSection("Locations", "City Ruins contains a mix of Alloy, Organics, Plastoid, Attack cards, and Events.\n\nSuburbs contains Organics, Plastoid, Dweller-style cards, Passive cards, and Events.\n\nResearch Facility contains Plastoid, Alloy, Passive cards, Defense cards, and Events.\n\nMilitary Base contains Alloy, Plastoid, Soldier cards, Weapon cards, Attack cards, and Events.\n\nFarmlands contains Organics, Worker cards, Passive cards, and Events.\n\nWilderness has no scavenge deck. Biodome contains Special cards."),
+                new RulebookSection("Locations", "The main play area uses three columns: generation and player info on the left, cards and actions in the center, and the Location board on the right.\n\nThe five main Locations are shown as pentagon-style buttons on the right-side board in movement-ring order. Each Location button shows its remaining card count, selected expedition worker count, and any [JUNK STORM] or [BIODOMERS] threat marker directly on the tile.\n\nDuring Expedition, click a Location tile to assign 1 worker, click the same tile again to assign another worker, then Confirm Expedition from the center panel when ready.\n\nCity Ruins contains a mix of Alloy, Organics, Plastoid, Attack cards, and Events. Suburbs contains Organics, Plastoid, Dweller-style cards, Passive cards, and Events. Research Facility contains Plastoid, Alloy, Passive cards, Defense cards, and Events. Military Base contains Alloy, Plastoid, Soldier cards, Weapon cards, Attack cards, and Events. Farmlands contains Organics, Worker cards, Passive cards, and Events.\n\nWilderness has no scavenge deck. Biodome contains Special cards."),
         new RulebookSection("Buildings", "Buildings are constructed by spending stored resources and temporary Labor. Tier 1 buildings are personal buildings; each player may build up to 4 and gains +2 Clout when building one.\n\nTier 1 costs include 1 Labor. Tier 2 buildings require a matching Tier 1, another Tier 1, 6 Clout, 2 Labor, and stored resources. Tier 3 buildings require 10 Clout, the required Tier 2 building, 3 Labor, and stored resources.\n\nBuilding a Tier 3 building enables victory at the end of the generation."),
         new RulebookSection("Victory", "Victory is checked at the end of each generation. A player wins if they have at least 10 Clout and at least one Tier 3 building.\n\nIf more than one player qualifies, use these tiebreakers:\n\n1. Highest Clout\n2. Most Tier 2 buildings\n3. Shared victory"),
         new RulebookSection("Current Prototype Simplifications", "This is a prototype, not the final board game. Known simplifications may include random or simplified targeting, automated building bonuses, default-priority resource payments, Wilderness alternate victory not implemented, shared-location conflict not fully implemented, and placeholder visuals.\n\nThe purpose is to test the core loop: Expedition → Scavenge → Play Cards → Build → Survive → Reset.")
@@ -45,6 +45,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
     private Transform boardRoot;
     private Transform controlRoot;
+    private Transform rightBoardRoot;
     private Transform logRoot;
     private Transform utilityRoot;
     private GameObject rulebookOverlay;
@@ -98,14 +99,18 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
         BuildRulebookOverlay(root.transform);
 
-        boardRoot = CreateScrollablePanel(root.transform, "Board", new Color(0.14f, 0.10f, 0.08f));
-        Anchor((RectTransform)boardRoot.parent.parent, new Vector2(0, 0.28f), new Vector2(0.66f, 0.86f), new Vector2(32, 18), new Vector2(-14, -136));
+        boardRoot = CreateScrollablePanel(root.transform, "Generation / Player Info", new Color(0.14f, 0.10f, 0.08f));
+        Anchor((RectTransform)boardRoot.parent.parent, new Vector2(0, 0.25f), new Vector2(0.25f, 0.86f), new Vector2(32, 18), new Vector2(-12, -136));
 
-        controlRoot = CreateScrollablePanel(root.transform, "Controls", new Color(0.12f, 0.09f, 0.08f));
-        Anchor((RectTransform)controlRoot.parent.parent, new Vector2(0.66f, 0.28f), new Vector2(1, 0.86f), new Vector2(14, 18), new Vector2(-32, -136));
+        controlRoot = CreateScrollablePanel(root.transform, "Cards / Hand / Actions", new Color(0.12f, 0.09f, 0.08f));
+        Anchor((RectTransform)controlRoot.parent.parent, new Vector2(0.25f, 0.25f), new Vector2(0.60f, 0.86f), new Vector2(12, 18), new Vector2(-12, -136));
+
+        var rightPanel = CreateBackgroundPanel(root.transform, "Pentagon Location Board", new Color(0.11f, 0.085f, 0.075f));
+        Anchor(rightPanel.GetComponent<RectTransform>(), new Vector2(0.60f, 0.25f), new Vector2(1, 0.86f), new Vector2(12, 18), new Vector2(-32, -136));
+        rightBoardRoot = rightPanel.transform;
 
         logRoot = CreateScrollablePanel(root.transform, "Log", new Color(0.10f, 0.08f, 0.07f));
-        Anchor((RectTransform)logRoot.parent.parent, new Vector2(0, 0), new Vector2(1, 0.28f), new Vector2(32, 18), new Vector2(-32, -16));
+        Anchor((RectTransform)logRoot.parent.parent, new Vector2(0, 0), new Vector2(1, 0.25f), new Vector2(32, 18), new Vector2(-32, -16));
     }
 
     private void Render()
@@ -113,8 +118,10 @@ public sealed class JunkStormUnityController : MonoBehaviour
         Clear(boardRoot);
         Clear(controlRoot);
         Clear(logRoot);
+        Clear(rightBoardRoot);
         RenderBoard();
         RenderControls();
+        RenderLocationBoard();
         RenderLog();
     }
 
@@ -122,21 +129,14 @@ public sealed class JunkStormUnityController : MonoBehaviour
     {
         CreateText(boardRoot, "Phase", $"Generation {game.Generation} — {game.CurrentPhase} — Active: {game.ActivePlayer.Name}\nFirst Player: {game.Players[game.FirstPlayerIndex].Name}\nTurn Order: {game.GetTurnOrderText()}", 28, FontStyle.Bold, new Color(1f, 0.81f, 0.46f));
 
-        var outpostText = string.Join("\n", game.Outposts.Select((outpost, index) =>
-        {
-            var markers = GetThreatMarkerText(index).Replace("\n", " ");
-            return $"{index + 1}. {outpost.Name} — {outpost.Deck.Count} cards {markers}";
-        }));
-        CreateText(boardRoot, "Locations", outpostText, 22, FontStyle.Normal, Color.white);
 
         foreach (var player in game.Players)
         {
             var buildings = player.Buildings.Count == 0 ? "No buildings" : string.Join(", ", player.Buildings);
-            var hand = player.Hand.Count == 0 ? "Empty" : string.Join(", ", player.Hand);
             CreateText(
                 boardRoot,
                 player.Name,
-                $"{player.Name} ({player.Character})\nClout {player.Clout} | Worker Tokens {player.Workers} | Deck {player.Deck.Count} | Discard {player.Discard.Count}\nStored Resources — Alloy {player.Resources.Alloy}, Organics {player.Resources.Organics}, Plastoid {player.Resources.Plastoid}\nTemporary Labor — Labor {player.Resources.Labor}\nHand: {hand}\nBuildings: {buildings}",
+                $"{player.Name} ({player.Character})\nCurrent Location: {GetPlayerLocationText(player)}\nClout {player.Clout} | Worker Tokens {player.Workers} | Deck {player.Deck.Count} | Discard {player.Discard.Count}\nStored Resources — Alloy {player.Resources.Alloy}, Organics {player.Resources.Organics}, Plastoid {player.Resources.Plastoid}\nTemporary Labor — Labor {player.Resources.Labor}\nBuildings: {buildings}",
                 19,
                 FontStyle.Normal,
                 new Color(0.88f, 0.80f, 0.70f));
@@ -145,6 +145,11 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
     private void RenderControls()
     {
+        CreateText(controlRoot, "CenterTitle", "Cards / Hand / Actions", 24, FontStyle.Bold, new Color(1f, 0.81f, 0.46f));
+        var activeHand = game.ActivePlayer.Hand.Count == 0 ? "Empty" : string.Join(", ", game.ActivePlayer.Hand);
+        CreateText(controlRoot, "CurrentHand", $"{game.ActivePlayer.Name} Hand: {activeHand}", 18, FontStyle.Normal, new Color(0.90f, 0.82f, 0.72f));
+        CreateText(controlRoot, "SelectedCardInfo", "Selected Card Info: hover a Recycle, Destroy, attack, or build button to see details in the top info banner.", 16, FontStyle.Normal, new Color(0.80f, 0.72f, 0.64f));
+
         if (inputLocked)
         {
             CreateText(controlRoot, "Input Locked", "Threat movement in progress...", 24, FontStyle.Bold, new Color(1f, 0.81f, 0.46f));
@@ -153,14 +158,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
         if (game.CurrentPhase == Phase.Expedition)
         {
-            foreach (var indexedOutpost in game.Outposts.Select((outpost, index) => new { outpost, index }))
-            {
-                CreateButton(controlRoot, GetLocationButtonLabel(indexedOutpost.outpost.Name, indexedOutpost.index), () =>
-                {
-                    AssignExpeditionWorker(indexedOutpost.index);
-                }, true, GetExpeditionTooltip(indexedOutpost.outpost.Name, indexedOutpost.index));
-            }
-
+            CreateText(controlRoot, "ExpeditionHint", "Choose workers by clicking Location tiles on the right-side pentagon board.", 18, FontStyle.Bold, new Color(1f, 0.81f, 0.46f));
             CreateButton(controlRoot, "Confirm Expedition", ConfirmExpedition, true, "Confirm Expedition — Send assigned workers to the selected Location and resolve scavenging.");
             CreateButton(controlRoot, "Clear Expedition Selection", ClearExpeditionSelection, true, "Clear Expedition Selection — Remove the currently assigned workers and choose again.");
             CreateButton(controlRoot, "Remove 1 Worker", RemoveAssignedWorker, true, "Remove 1 Worker — Reduce the number of workers assigned to this expedition.");
@@ -241,6 +239,29 @@ public sealed class JunkStormUnityController : MonoBehaviour
         }
     }
 
+    private void RenderLocationBoard()
+    {
+        CreateText(rightBoardRoot, "BoardTitle", "Location Board", 28, FontStyle.Bold, new Color(1f, 0.81f, 0.46f));
+        var titleRect = (RectTransform)rightBoardRoot.Find("BoardTitle");
+        Anchor(titleRect, new Vector2(0, 1), new Vector2(1, 1), new Vector2(24, -58), new Vector2(-24, -18));
+
+        CreateText(rightBoardRoot, "BoardHint", "Click pentagon tiles during Expedition to assign workers. Threat markers step here during movement.", 16, FontStyle.Normal, new Color(0.86f, 0.78f, 0.68f));
+        var hintRect = (RectTransform)rightBoardRoot.Find("BoardHint");
+        Anchor(hintRect, new Vector2(0, 1), new Vector2(1, 1), new Vector2(24, -100), new Vector2(-24, -62));
+
+        for (var index = 0; index < game.Outposts.Count; index++)
+        {
+            var outpostIndex = index;
+            var outpost = game.Outposts[index];
+            var button = CreateButton(rightBoardRoot, GetLocationButtonLabel(outpost.Name, outpostIndex), () =>
+            {
+                AssignExpeditionWorker(outpostIndex);
+            }, !inputLocked && game.CurrentPhase == Phase.Expedition, GetExpeditionTooltip(outpost.Name, outpostIndex));
+            StyleLocationTile(button, outpostIndex);
+            AnchorLocationTile((RectTransform)button.transform, outpostIndex);
+        }
+    }
+
     private void RenderLog()
     {
         CreateText(logRoot, "LogTitle", "Event Log", 24, FontStyle.Bold, new Color(1f, 0.81f, 0.46f));
@@ -250,6 +271,12 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
     private void AssignExpeditionWorker(int outpostIndex)
     {
+        if (game.CurrentPhase != Phase.Expedition)
+        {
+            SetInfo("Location tiles assign workers during the Expedition Phase.");
+            return;
+        }
+
         if (outpostIndex == DisplayJunkStormOutpost || outpostIndex == DisplayBiodomerOutpost)
         {
             var message = $"{game.ActivePlayer.Name} cannot visit {game.Outposts[outpostIndex].Name}; {GetUnsafeLocationSafetyReason(outpostIndex)}";
@@ -477,7 +504,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
     {
         if (outpostIndex == DisplayJunkStormOutpost || outpostIndex == DisplayBiodomerOutpost)
         {
-            return $"{locationName} — Unsafe. {GetUnsafeLocationSafetyReason(outpostIndex)} Players cannot choose this Location this generation.";
+            return $"{locationName} — Cards: {game.Outposts[outpostIndex].Deck.Count}. Unsafe. {GetUnsafeLocationSafetyReason(outpostIndex)} Players cannot choose this Location this generation.";
         }
 
         if (selectedExpeditionOutpost == outpostIndex && assignedExpeditionWorkers > 0)
@@ -485,7 +512,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
             return $"{locationName} — Selected for expedition. {assignedExpeditionWorkers} workers assigned. Click again to assign 1 more worker.";
         }
 
-        return $"{locationName} — Click to assign 1 worker. Click again to assign another worker. Confirm Expedition when ready.";
+        return $"{locationName} — Cards: {game.Outposts[outpostIndex].Deck.Count}. Click to assign 1 worker. Click again to assign another worker. Confirm Expedition when ready.";
     }
 
     private string GetUnsafeLocationSafetyReason(int outpostIndex)
@@ -512,7 +539,7 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
     private string GetLocationButtonLabel(string locationName, int outpostIndex)
     {
-        var lines = new List<string> { locationName, $"Deck: {game.Outposts[outpostIndex].Deck.Count}" };
+        var lines = new List<string> { $"⬟ {locationName}", $"Cards: {game.Outposts[outpostIndex].Deck.Count}" };
         var markerText = GetThreatMarkerText(outpostIndex);
         if (!string.IsNullOrWhiteSpace(markerText))
         {
@@ -564,6 +591,16 @@ public sealed class JunkStormUnityController : MonoBehaviour
         }
 
         return "Safe to visit this generation.";
+    }
+
+    private string GetPlayerLocationText(PlayerState player)
+    {
+        if (player.ExpeditionOutpost < 0 || player.ExpeditionOutpost >= game.Outposts.Count)
+        {
+            return "Colony";
+        }
+
+        return $"{game.Outposts[player.ExpeditionOutpost].Name} ({player.ExpeditionWorkers} worker(s))";
     }
 
     private int DisplayJunkStormOutpost => displayedJunkStormOutpost ?? game.JunkStormOutpost;
@@ -653,6 +690,43 @@ public sealed class JunkStormUnityController : MonoBehaviour
 
         var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
         DontDestroyOnLoad(eventSystem);
+    }
+
+    private void AnchorLocationTile(RectTransform rectTransform, int outpostIndex)
+    {
+        // Canonical movement ring order: City Ruins → Suburbs → Research Facility → Military Base → Farmlands.
+        var positions = new[]
+        {
+            new Vector2(0.50f, 0.78f),
+            new Vector2(0.82f, 0.58f),
+            new Vector2(0.70f, 0.25f),
+            new Vector2(0.30f, 0.25f),
+            new Vector2(0.18f, 0.58f)
+        };
+
+        var position = positions[outpostIndex];
+        rectTransform.anchorMin = position;
+        rectTransform.anchorMax = position;
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.sizeDelta = new Vector2(190, 122);
+        rectTransform.anchoredPosition = Vector2.zero;
+    }
+
+    private void StyleLocationTile(Button button, int outpostIndex)
+    {
+        var image = button.GetComponent<Image>();
+        image.color = outpostIndex == DisplayJunkStormOutpost || outpostIndex == DisplayBiodomerOutpost
+            ? new Color(0.52f, 0.22f, 0.14f)
+            : new Color(0.98f, 0.67f, 0.25f);
+
+        var layout = button.GetComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+        layout.minHeight = 112;
+        layout.minWidth = 180;
+
+        var outline = button.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.08f, 0.04f, 0.02f, 0.95f);
+        outline.effectDistance = new Vector2(3, -3);
     }
 
     private Button CreateButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick, bool interactable = true, string tooltipText = null)
